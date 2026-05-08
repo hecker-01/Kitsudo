@@ -1,4 +1,24 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <resources>
     <string name="app_name">Kitsudo</string>
+
+    <!-- Task list -->
+    <string name="task_list_title">Tasks</string>
+    <string name="task_list_empty">No tasks yet</string>
+    <string name="task_list_error">Something went wrong. Please try again.</string>
+
+    <!-- Task item -->
+    <string name="task_item_completed_description">Task completed</string>
+    <string name="task_item_pending_description">Task pending</string>
+    <string name="task_sync_pending_description">Waiting to sync</string>
+    <string name="task_sync_conflict_description">Sync conflict</string>
+
+    <!-- Theme picker -->
+    <string name="theme_picker_action">Theme</string>
+    <string name="theme_picker_title">Choose a theme</string>
+    <string name="theme_flavor_latte">Latte</string>
+    <string name="theme_flavor_frappe">Frappé</string>
+    <string name="theme_flavor_macchiato">Macchiato</string>
+    <string name="theme_flavor_mocha">Mocha</string>
+    <string name="theme_flavor_selected_description">%1$s — currently selected</string>
 </resources>
