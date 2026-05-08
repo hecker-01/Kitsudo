@@ -3,6 +3,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val gitCommitCount = providers.exec {
+    commandLine("git", "rev-list", "--count", "HEAD")
+}.standardOutput.asText.get().trim().toInt()
+
 android {
     namespace = "dev.heckr.kitsudo"
     compileSdk {
@@ -15,15 +19,36 @@ android {
         applicationId = "dev.heckr.kitsudo"
         minSdk = 33
         targetSdk = 36
-        versionCode = 1
+        versionCode = gitCommitCount
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // signingConfigs {
+    //     getByName("debug") {
+    //         storeFile = file("cordium-dev.keystore")
+    //         storePassword = "CordiumPassw"
+    //         keyAlias = "cordium"
+    //         keyPassword = "CordiumPassw"
+    //     }
+    //     create("release") {
+    //         storeFile = file("cordium-release.keystore")
+    //         storePassword = "CordiumPassw"
+    //         keyAlias = "cordium"
+    //         keyPassword = "CordiumPassw"
+    //     }
+    // }
+
     buildTypes {
+        debug {
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            // signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
+            // signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
