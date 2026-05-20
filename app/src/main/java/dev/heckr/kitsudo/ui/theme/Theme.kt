@@ -1,12 +1,19 @@
 package dev.heckr.kitsudo.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import dev.heckr.kitsudo.domain.model.CatppuccinFlavor
+import dev.heckr.kitsudo.domain.model.ThemePalette
+
+// ── Catppuccin color schemes ───────────────────────────────────────────────
 
 private fun latteColorScheme(): ColorScheme = lightColorScheme(
     primary = Latte.Mauve,
@@ -136,27 +143,51 @@ private fun mochaColorScheme(): ColorScheme = darkColorScheme(
     surfaceTint = Mocha.Mauve,
 )
 
-fun colorSchemeFor(flavor: CatppuccinFlavor): ColorScheme = when (flavor) {
-    CatppuccinFlavor.LATTE -> latteColorScheme()
-    CatppuccinFlavor.FRAPPE -> frappeColorScheme()
-    CatppuccinFlavor.MACCHIATO -> macchiatoColorScheme()
-    CatppuccinFlavor.MOCHA -> mochaColorScheme()
-}
+// ── Public helpers ─────────────────────────────────────────────────────────
 
 fun flavorPreviewColors(flavor: CatppuccinFlavor): List<Color> = when (flavor) {
-    CatppuccinFlavor.LATTE -> listOf(Latte.Mauve, Latte.Blue, Latte.Pink, Latte.Green, Latte.Peach, Latte.Teal)
-    CatppuccinFlavor.FRAPPE -> listOf(Frappe.Mauve, Frappe.Blue, Frappe.Pink, Frappe.Green, Frappe.Peach, Frappe.Teal)
-    CatppuccinFlavor.MACCHIATO -> listOf(Macchiato.Mauve, Macchiato.Blue, Macchiato.Pink, Macchiato.Green, Macchiato.Peach, Macchiato.Teal)
-    CatppuccinFlavor.MOCHA -> listOf(Mocha.Mauve, Mocha.Blue, Mocha.Pink, Mocha.Green, Mocha.Peach, Mocha.Teal)
+    CatppuccinFlavor.LATTE ->
+        listOf(Latte.Mauve, Latte.Blue, Latte.Pink, Latte.Green, Latte.Peach, Latte.Teal)
+    CatppuccinFlavor.FRAPPE ->
+        listOf(Frappe.Mauve, Frappe.Blue, Frappe.Pink, Frappe.Green, Frappe.Peach, Frappe.Teal)
+    CatppuccinFlavor.MACCHIATO ->
+        listOf(
+            Macchiato.Mauve, Macchiato.Blue, Macchiato.Pink,
+            Macchiato.Green, Macchiato.Peach, Macchiato.Teal,
+        )
+    CatppuccinFlavor.MOCHA ->
+        listOf(Mocha.Mauve, Mocha.Blue, Mocha.Pink, Mocha.Green, Mocha.Peach, Mocha.Teal)
 }
 
+// ── KitsudoTheme ───────────────────────────────────────────────────────────
+
+/**
+ * Root theme composable.
+ *
+ * - [ThemePalette.MATERIAL3] → Material You dynamic colors (wallpaper-derived, API 31+).
+ *   Light/dark follows the system dark-mode setting.
+ * - All Catppuccin palettes → fixed hand-crafted color schemes.
+ */
 @Composable
 fun KitsudoTheme(
-    flavor: CatppuccinFlavor = CatppuccinFlavor.MOCHA,
+    palette: ThemePalette = ThemePalette.MOCHA,
     content: @Composable () -> Unit,
 ) {
+    val context = LocalContext.current
+    val systemDark = isSystemInDarkTheme()
+
+    val colorScheme = when (palette) {
+        ThemePalette.MATERIAL3 ->
+            if (systemDark) dynamicDarkColorScheme(context)
+            else dynamicLightColorScheme(context)
+        ThemePalette.LATTE -> latteColorScheme()
+        ThemePalette.FRAPPE -> frappeColorScheme()
+        ThemePalette.MACCHIATO -> macchiatoColorScheme()
+        ThemePalette.MOCHA -> mochaColorScheme()
+    }
+
     MaterialTheme(
-        colorScheme = colorSchemeFor(flavor),
+        colorScheme = colorScheme,
         typography = Typography,
         content = content,
     )

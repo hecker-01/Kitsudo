@@ -4,21 +4,109 @@
 
     <!-- Task list -->
     <string name="task_list_title">Tasks</string>
-    <string name="task_list_empty">No tasks yet</string>
+    <string name="task_list_empty">No tasks yet.\nTap + to add your first task.</string>
     <string name="task_list_error">Something went wrong. Please try again.</string>
 
-    <!-- Task item -->
+    <!-- Task actions -->
+    <string name="task_add_label">Add task</string>
+    <string name="task_add_confirm">Add</string>
+    <string name="task_add_cancel">Cancel</string>
+    <string name="task_delete_label">Delete</string>
+    <string name="task_swipe_complete">Complete</string>
+    <string name="task_swipe_undo">Undo</string>
+    <string name="task_mark_complete">Mark as complete</string>
+    <string name="task_mark_incomplete">Mark as incomplete</string>
+
+    <!-- Task fields -->
+    <string name="task_field_title">Title</string>
+    <string name="task_field_description">Description (optional)</string>
+
+    <!-- Task deadline -->
+    <string name="task_deadline_label">Deadline</string>
+    <string name="task_deadline_set">Set deadline</string>
+    <string name="task_deadline_change">Change deadline</string>
+    <string name="task_deadline_clear">Clear</string>
+
+    <!-- Task subtasks -->
+    <string name="task_subtasks_label">Subtasks</string>
+    <string name="task_subtasks_label_count">Subtasks (%1$d / %2$d)</string>
+    <string name="task_subtasks_expand">Show subtasks</string>
+    <string name="task_subtasks_collapse">Hide subtasks</string>
+    <string name="task_subtask_count">%1$d/%2$d subtasks</string>
+    <string name="task_subtask_add">Add</string>
+    <string name="task_subtask_add_hint">New subtask…</string>
+
+    <!-- Task detail -->
+    <string name="task_detail_back">Back</string>
+
+    <!-- Task item accessibility -->
     <string name="task_item_completed_description">Task completed</string>
     <string name="task_item_pending_description">Task pending</string>
     <string name="task_sync_pending_description">Waiting to sync</string>
     <string name="task_sync_conflict_description">Sync conflict</string>
 
-    <!-- Theme picker -->
-    <string name="theme_picker_action">Theme</string>
-    <string name="theme_picker_title">Choose a theme</string>
+    <!-- Deadline picker -->
+    <string name="deadline_picker_next">Next</string>
+    <string name="deadline_picker_cancel">Cancel</string>
+    <string name="deadline_picker_back">Back</string>
+    <string name="deadline_picker_confirm">Confirm</string>
+    <string name="deadline_picker_time_title">Pick a time</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">Task deadlines</string>
+    <string name="notification_channel_description">Reminders when task deadlines arrive</string>
+    <string name="notification_deadline_title">Due: %s</string>
+    <string name="notification_deadline_body">This task deadline has arrived.</string>
+
+    <!-- Theme palettes -->
+    <string name="theme_palette_material3">Material You</string>
+    <string name="theme_palette_catppuccin">Catppuccin</string>
+    <string name="theme_palette_material3_hint">Colors adapt to your wallpaper</string>
+
+    <!-- Theme picker (dark mode switch, used in Settings) -->
+    <string name="theme_dark_mode_label">Dark mode</string>
+    <string name="theme_dark_mode_on_description">Dark mode is on</string>
+    <string name="theme_dark_mode_off_description">Dark mode is off</string>
     <string name="theme_flavor_latte">Latte</string>
     <string name="theme_flavor_frappe">Frappé</string>
     <string name="theme_flavor_macchiato">Macchiato</string>
     <string name="theme_flavor_mocha">Mocha</string>
     <string name="theme_flavor_selected_description">%1$s — currently selected</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Settings</string>
+
+    <!-- Settings — sections -->
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_updates">Updates</string>
+    <string name="settings_section_about">About</string>
+
+    <!-- Settings — appearance -->
+    <string name="settings_theme_title">Theme</string>
+
+    <!-- Settings — updates -->
+    <string name="settings_updates_check">Check for updates</string>
+    <string name="settings_updates_tap_hint">Tap to check for new versions</string>
+    <string name="settings_updates_checking">Checking for updates…</string>
+    <string name="settings_updates_up_to_date">You\'re on the latest version</string>
+    <string name="settings_updates_available_format">Update available: %s — tap to install</string>
+    <string name="settings_updates_downloading_init">Initializing download…</string>
+    <string name="settings_updates_downloading_format">Downloading… %d%%</string>
+    <string name="settings_updates_installing">Installing update…</string>
+    <string name="settings_updates_error_format">Couldn\'t check: %s</string>
+
+    <!-- Settings — update dialog -->
+    <string name="settings_update_dialog_title_format">Update to %s</string>
+    <string name="settings_update_dialog_size_format">Download size: %s</string>
+    <string name="settings_update_no_changelog">No changelog available.</string>
+    <string name="settings_update_dialog_confirm">Update</string>
+    <string name="settings_update_dialog_cancel">Cancel</string>
+
+    <!-- Settings — about -->
+    <string name="settings_about_description">A local-first task planner for Android.</string>
+    <string name="settings_version_format">Version %s</string>
+    <string name="settings_build_format">Build %1$d · %2$s</string>
+    <string name="settings_build_debug">debug</string>
+    <string name="settings_build_release">release</string>
+    <string name="settings_copyright_footer">© Kitsudo, by heckr.dev</string>
 </resources>

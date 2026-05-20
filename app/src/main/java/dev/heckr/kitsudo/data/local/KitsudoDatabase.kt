@@ -4,12 +4,17 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import dev.heckr.kitsudo.data.local.dao.TaskDao
 import dev.heckr.kitsudo.data.local.entity.TaskEntity
+import dev.heckr.kitsudo.data.local.migration.MIGRATION_1_2
 
 @Database(
     entities = [TaskEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class KitsudoDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
+
+    companion object {
+        val migrations = arrayOf(MIGRATION_1_2)
+    }
 }

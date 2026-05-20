@@ -3,7 +3,7 @@ package dev.heckr.kitsudo.presentation.theme
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.heckr.kitsudo.domain.model.CatppuccinFlavor
+import dev.heckr.kitsudo.domain.model.ThemePalette
 import dev.heckr.kitsudo.domain.usecase.GetThemeFlavorUseCase
 import dev.heckr.kitsudo.domain.usecase.SetThemeFlavorUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,12 +27,12 @@ class ThemeViewModel @Inject constructor(
 
     init {
         getThemeFlavorUseCase()
-            .onEach { flavor -> _uiState.update { it.copy(flavor = flavor) } }
+            .onEach { palette -> _uiState.update { it.copy(palette = palette) } }
             .catch { /* retain default */ }
             .launchIn(viewModelScope)
     }
 
-    fun setFlavor(flavor: CatppuccinFlavor) {
-        viewModelScope.launch { setThemeFlavorUseCase(flavor) }
+    fun setPalette(palette: ThemePalette) {
+        viewModelScope.launch { setThemeFlavorUseCase(palette) }
     }
 }

@@ -19,6 +19,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): KitsudoDatabase =
         Room.databaseBuilder(context, KitsudoDatabase::class.java, "kitsudo.db")
+            .addMigrations(*KitsudoDatabase.migrations)
             .build()
 
     @Provides

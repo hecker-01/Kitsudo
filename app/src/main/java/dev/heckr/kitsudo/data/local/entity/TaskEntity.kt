@@ -11,4 +11,10 @@ data class TaskEntity(
     val isCompleted: Boolean,
     val createdAt: Long,
     val syncStatus: String,
+    /** Null for top-level tasks; parent task id for subtasks. */
+    val parentId: String?,
+    /** Epoch-millisecond deadline. Null means no deadline. */
+    val deadlineAt: Long?,
+    /** Ascending display order within a parent or among top-level tasks. */
+    val sortOrder: Int,
 )

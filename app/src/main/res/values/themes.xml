@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <resources>
-
+    <!--
+        android:Theme.Material.NoActionBar is a dark AOSP theme available
+        from API 21 — always present on our minSdk 33 devices.
+        Setting windowBackground to the Mocha base colour prevents a white
+        flash before Compose draws, and windowAnimationStyle = @null lets
+        the Compose NavHost animations own every screen transition.
+    -->
     <style
         name="Theme.Kitsudo"
-        parent="android:Theme.Material.Light.NoActionBar"
-    />
+        parent="android:Theme.Material.NoActionBar"
+    >
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>

@@ -1,7 +1,7 @@
 package dev.heckr.kitsudo.presentation.theme
 
-import dev.heckr.kitsudo.domain.model.CatppuccinFlavor
+import dev.heckr.kitsudo.domain.model.ThemePalette
 
 data class ThemeUiState(
-    val flavor: CatppuccinFlavor = CatppuccinFlavor.MOCHA,
+    val palette: ThemePalette = ThemePalette.MOCHA,
 )

@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
+import dev.heckr.kitsudo.data.update.UpdateChecker
 import dev.heckr.kitsudo.presentation.navigation.KitsudoNavHost
 import dev.heckr.kitsudo.presentation.theme.ThemeViewModel
 import dev.heckr.kitsudo.ui.theme.KitsudoTheme
@@ -22,14 +23,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        UpdateChecker.check(this)
         setContent {
             val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()
-            KitsudoTheme(flavor = uiState.flavor) {
-                KitsudoNavHost(
-                    currentFlavor = uiState.flavor,
-                    onFlavorChange = themeViewModel::setFlavor,
-                    modifier = Modifier.fillMaxSize(),
-                )
+            KitsudoTheme(palette = uiState.palette) {
+                KitsudoNavHost(modifier = Modifier.fillMaxSize())
             }
         }
     }
