@@ -33,6 +33,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -334,31 +335,33 @@ private fun TaskCard(
                             Text(
                                 text = task.description,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.let {
+                                    if (task.isCompleted) it.copy(alpha = 0.5f) else it
+                                },
+                                textDecoration = if (task.isCompleted) TextDecoration.LineThrough
+                                else null,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(top = 2.dp),
-                        ) {
-                            if (task.deadlineAt != null) {
-                                DeadlineChip(
-                                    deadlineAt = task.deadlineAt,
-                                    isOverdue = task.isDeadlineOverdue,
-                                )
-                            }
-                            if (task.subtaskCount > 0) {
-                                Text(
-                                    text = stringResource(
-                                        R.string.task_subtask_count,
-                                        task.subtaskCompletedCount,
-                                        task.subtaskCount,
-                                    ),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                        if (task.deadlineAt != null || task.subtaskCount > 0) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(top = 3.dp),
+                            ) {
+                                if (task.deadlineAt != null) {
+                                    DeadlineChip(
+                                        deadlineAt = task.deadlineAt,
+                                        isOverdue = task.isDeadlineOverdue,
+                                    )
+                                }
+                                if (task.subtaskCount > 0) {
+                                    SubtaskCountChip(
+                                        completed = task.subtaskCompletedCount,
+                                        total = task.subtaskCount,
+                                    )
+                                }
                             }
                         }
                     }
@@ -479,6 +482,29 @@ private fun TaskSwipeBackground(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface),
+        )
+    }
+}
+
+// ── Subtask count chip ─────────────────────────────────────────────────────
+
+/** Chip-styled subtask progress badge — matches the visual weight of DeadlineChip. */
+@Composable
+private fun SubtaskCountChip(
+    completed: Int,
+    total: Int,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier,
+    ) {
+        Text(
+            text = stringResource(R.string.task_subtask_count, completed, total),
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
         )
     }
 }
