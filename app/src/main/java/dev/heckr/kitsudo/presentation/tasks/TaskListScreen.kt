@@ -170,6 +170,7 @@ private fun TaskList(
                 onToggleComplete = { onToggleComplete(task.id, it) },
                 onToggleSubtaskComplete = onToggleSubtaskComplete,
                 onDelete = { onDeleteTask(task.id) },
+                modifier = Modifier.animateItem(),
             )
         }
     }
@@ -339,12 +340,12 @@ private fun TaskSwipeBackground(
             contentAlignment = Alignment.CenterStart,
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .padding(start = 20.dp),
+                .background(MaterialTheme.colorScheme.primaryContainer),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(start = 20.dp),
             ) {
                 Icon(
                     Icons.Filled.Check,
@@ -366,12 +367,12 @@ private fun TaskSwipeBackground(
             contentAlignment = Alignment.CenterEnd,
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.errorContainer)
-                .padding(end = 20.dp),
+                .background(MaterialTheme.colorScheme.errorContainer),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(end = 20.dp),
             ) {
                 Text(
                     text = stringResource(R.string.task_delete_label),

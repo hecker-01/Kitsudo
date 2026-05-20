@@ -172,7 +172,7 @@ private fun TaskDetailContent(
                         checked = task.isCompleted,
                         onCheckedChange = { checked ->
                             view.performHapticFeedback(
-                                if (checked) HapticFeedbackConstants.CONFIRM
+                                if (checked) HapticFeedbackConstants.TOGGLE_ON
                                 else HapticFeedbackConstants.TOGGLE_OFF,
                             )
                             onToggleComplete(checked)

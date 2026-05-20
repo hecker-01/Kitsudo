@@ -1,6 +1,9 @@
 package dev.heckr.kitsudo.presentation.settings
 
 import android.text.format.Formatter
+import android.view.HapticFeedbackConstants
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,9 +33,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -46,10 +47,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -128,36 +133,33 @@ private fun SettingsContent(
         },
         modifier = modifier,
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 24.dp),
+                .padding(innerPadding),
         ) {
-            // ── Appearance ────────────────────────────────────────────────
-            SectionLabel(stringResource(R.string.settings_section_appearance))
-            AppearanceCard(palette = uiState.palette, onPaletteChange = onPaletteChange)
-
-            // ── Updates ───────────────────────────────────────────────────
-            SectionLabel(stringResource(R.string.settings_section_updates))
-            UpdateCard(status = uiState.updateStatus, onTap = onUpdateCardTapped)
-
-            // ── About ─────────────────────────────────────────────────────
-            SectionLabel(stringResource(R.string.settings_section_about))
-            AboutCard(uiState = uiState)
-
-            // ── Footer ────────────────────────────────────────────────────
-            Text(
-                text = stringResource(R.string.settings_copyright_footer),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp, bottom = 4.dp),
-            )
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
+                    // Reserve space so content is never hidden behind the footer
+                    .padding(bottom = 56.dp),
+            ) {
+                // ── Appearance ────────────────────────────────────────────────
+                SectionLabel(stringResource(R.string.settings_section_appearance))
+                AppearanceCard(palette = uiState.palette, onPaletteChange = onPaletteChange)
+
+                // ── Updates ───────────────────────────────────────────────────
+                SectionLabel(stringResource(R.string.settings_section_updates))
+                UpdateCard(status = uiState.updateStatus, onTap = onUpdateCardTapped)
+
+                // ── About ─────────────────────────────────────────────────────
+                SectionLabel(stringResource(R.string.settings_section_about))
+                AboutCard(uiState = uiState)
+            }
+
+            SettingsFooter(modifier = Modifier.align(Alignment.BottomCenter))
         }
     }
 
@@ -194,7 +196,6 @@ private fun CardTitle(text: String, modifier: Modifier = Modifier) {
 
 // ── Appearance card ────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppearanceCard(
     palette: ThemePalette,
@@ -218,18 +219,21 @@ private fun AppearanceCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             // ── Top-level: Material You vs Catppuccin ──────────────────
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                SegmentedButton(
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                ThemeOptionCard(
+                    label = stringResource(R.string.theme_palette_material3),
                     selected = !palette.isCatppuccin,
                     onClick = { onPaletteChange(ThemePalette.MATERIAL3) },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                    label = { Text(stringResource(R.string.theme_palette_material3)) },
+                    modifier = Modifier.weight(1f),
                 )
-                SegmentedButton(
+                ThemeOptionCard(
+                    label = stringResource(R.string.theme_palette_catppuccin),
                     selected = palette.isCatppuccin,
                     onClick = { onPaletteChange(lastCatppuccinPalette) },
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                    label = { Text(stringResource(R.string.theme_palette_catppuccin)) },
+                    modifier = Modifier.weight(1f),
                 )
             }
 
@@ -294,6 +298,7 @@ private fun DarkModeRow(
     onToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val view = LocalView.current
     val desc = stringResource(
         if (isDark) R.string.theme_dark_mode_on_description
         else R.string.theme_dark_mode_off_description,
@@ -306,10 +311,17 @@ private fun DarkModeRow(
         Text(
             text = stringResource(R.string.theme_dark_mode_label),
             style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Switch(
             checked = isDark,
-            onCheckedChange = onToggle,
+            onCheckedChange = { checked ->
+                view.performHapticFeedback(
+                    if (checked) HapticFeedbackConstants.TOGGLE_ON
+                    else HapticFeedbackConstants.TOGGLE_OFF,
+                )
+                onToggle(checked)
+            },
             thumbContent = if (isDark) {
                 {
                     Icon(
@@ -326,25 +338,83 @@ private fun DarkModeRow(
     }
 }
 
-// ── Frappé / Macchiato / Mocha segmented row ──────────────────────────────
+// ── Frappé / Macchiato / Mocha card row ───────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DarkFlavorRow(
     selected: ThemePalette,
     onSelect: (ThemePalette) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth()) {
-        darkPalettes.forEachIndexed { index, palette ->
-            SegmentedButton(
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        darkPalettes.forEach { palette ->
+            ThemeOptionCard(
+                label = stringResource(palette.labelRes()),
                 selected = palette == selected,
                 onClick = { onSelect(palette) },
-                shape = SegmentedButtonDefaults.itemShape(
-                    index = index,
-                    count = darkPalettes.size,
-                ),
-                label = { Text(stringResource(palette.labelRes())) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+// ── Theme option card (shared by both picker rows) ─────────────────────────
+
+@Composable
+private fun ThemeOptionCard(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val view = LocalView.current
+    Card(
+        onClick = {
+            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            onClick()
+        },
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            },
+            contentColor = if (selected) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+        ),
+        modifier = modifier,
+    ) {
+        // Inline checkmark + label. labelMedium (12 sp) + reduced horizontal
+        // padding gives "Macchiato" enough room in the 3-column row without
+        // wrapping. maxLines/Ellipsis is a safety net for any future labels.
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp, horizontal = 6.dp),
+        ) {
+            if (selected) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(end = 4.dp)
+                        .size(14.dp),
+                )
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -358,12 +428,16 @@ private fun UpdateCard(
     onTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val view = LocalView.current
     val isActive = status is AppUpdater.Status.Downloading ||
         status is AppUpdater.Status.Installing ||
         status is AppUpdater.Status.Checking
 
     Card(
-        onClick = onTap,
+        onClick = {
+            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            onTap()
+        },
         enabled = !isActive,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -516,6 +590,43 @@ private fun UpdateConfirmDialog(
             }
         },
     )
+}
+
+// ── Footer (always pinned to screen bottom) ────────────────────────────────
+
+@Composable
+private fun SettingsFooter(modifier: Modifier = Modifier) {
+    val uriHandler = LocalUriHandler.current
+    val url = stringResource(R.string.settings_footer_url)
+    Row(
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            // Opaque background so scrolling content doesn't bleed through
+            .background(MaterialTheme.colorScheme.background)
+            .padding(vertical = 16.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_footer_prefix),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        // Explicit spacer — trailing spaces in XML string resources are trimmed by AAPT
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = stringResource(R.string.settings_footer_link),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            textDecoration = TextDecoration.Underline,
+            modifier = Modifier.clickable { uriHandler.openUri(url) },
+        )
+        Text(
+            text = stringResource(R.string.settings_footer_suffix),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 // ── Previews ───────────────────────────────────────────────────────────────

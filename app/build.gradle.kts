@@ -24,7 +24,7 @@ android {
         minSdk = 33
         targetSdk = 36
         versionCode = gitCommitCount
-        versionName = "1.0"
+        versionName = "0.5"
 
         testInstrumentationRunner = "com.google.dagger.hilt.android.testing.HiltTestRunner"
     }

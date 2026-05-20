@@ -108,5 +108,8 @@
     <string name="settings_build_format">Build %1$d · %2$s</string>
     <string name="settings_build_debug">debug</string>
     <string name="settings_build_release">release</string>
-    <string name="settings_copyright_footer">© Kitsudo, by heckr.dev</string>
+    <string name="settings_footer_prefix">© Kitsudo, by</string>
+    <string name="settings_footer_link">heckr.dev</string>
+    <string name="settings_footer_url">https://heckr.dev</string>
+    <string name="settings_footer_suffix">.</string>
 </resources>
