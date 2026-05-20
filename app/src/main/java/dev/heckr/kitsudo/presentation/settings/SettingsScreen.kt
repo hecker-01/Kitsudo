@@ -216,7 +216,7 @@ private fun AppearanceCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             CardTitle(stringResource(R.string.settings_theme_title))
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // ── Top-level: Material You vs Catppuccin ──────────────────
             Row(
@@ -243,14 +243,14 @@ private fun AppearanceCard(
                     text = stringResource(R.string.theme_palette_material3_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 10.dp),
+                    modifier = Modifier.padding(top = 8.dp),
                 )
             }
 
             // ── Catppuccin section ─────────────────────────────────────
             AnimatedVisibility(visible = palette.isCatppuccin) {
                 Column {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     // Dark mode switch (M3 Expressive — icon thumb when checked)
                     DarkModeRow(
@@ -274,7 +274,7 @@ private fun AppearanceCard(
                     // Dark flavor row
                     AnimatedVisibility(visible = palette.isDark) {
                         Column {
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             DarkFlavorRow(
                                 selected = palette,
                                 onSelect = { chosen ->
@@ -398,7 +398,7 @@ private fun ThemeOptionCard(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp, horizontal = 6.dp),
+                .padding(vertical = 8.dp, horizontal = 6.dp),
         ) {
             if (selected) {
                 Icon(
