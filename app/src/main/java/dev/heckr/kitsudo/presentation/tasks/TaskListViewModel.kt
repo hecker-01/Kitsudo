@@ -8,6 +8,7 @@ import dev.heckr.kitsudo.domain.usecase.CascadeCompleteUseCase
 import dev.heckr.kitsudo.domain.usecase.CreateTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.DeleteTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.GetTasksUseCase
+import dev.heckr.kitsudo.domain.usecase.UpdateTaskUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +26,7 @@ class TaskListViewModel @Inject constructor(
     private val createTaskUseCase: CreateTaskUseCase,
     private val cascadeCompleteUseCase: CascadeCompleteUseCase,
     private val deleteTaskUseCase: DeleteTaskUseCase,
+    private val updateTaskUseCase: UpdateTaskUseCase,
     private val notificationScheduler: NotificationScheduler,
 ) : ViewModel() {
 
@@ -35,9 +37,14 @@ class TaskListViewModel @Inject constructor(
         getTasksUseCase()
             .onStart { _uiState.update { it.copy(isLoading = true) } }
             .onEach { tasks ->
-                _uiState.update {
-                    it.copy(
-                        tasks = tasks.map { t -> t.toWithSubtasksUi() },
+                val now = System.currentTimeMillis()
+                val sorted = tasks.map { t -> t.toWithSubtasksUi(now) }.smartSorted()
+                val overdueCount = sorted.count { it.isDeadlineOverdue }
+                _uiState.update { state ->
+                    state.copy(
+                        allTasks = sorted,
+                        tasks = sorted.applyFilter(state.filter),
+                        overdueCount = overdueCount,
                         isLoading = false,
                         error = null,
                     )
@@ -45,6 +52,15 @@ class TaskListViewModel @Inject constructor(
             }
             .catch { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
             .launchIn(viewModelScope)
+    }
+
+    fun setFilter(filter: TaskListFilter) {
+        _uiState.update { state ->
+            state.copy(
+                filter = filter,
+                tasks = state.allTasks.applyFilter(filter),
+            )
+        }
     }
 
     fun showAddSheet() = _uiState.update { it.copy(showAddSheet = true) }
@@ -88,3 +104,41 @@ class TaskListViewModel @Inject constructor(
         }
     }
 }
+
+// ── Smart sort ─────────────────────────────────────────────────────────────
+
+/**
+ * Groups tasks into four ordered buckets:
+ *  1. Overdue incomplete  — nearest deadline first, HIGH priority breaks ties
+ *  2. Upcoming deadline incomplete — soonest deadline first, HIGH priority breaks ties
+ *  3. No-deadline incomplete — HIGH priority first, then by creation time
+ *  4. Completed — most recently created first
+ */
+private fun List<TaskWithSubtasksUi>.smartSorted(): List<TaskWithSubtasksUi> {
+    val overdue = filter { !it.isCompleted && it.isDeadlineOverdue }
+        .sortedWith(
+            compareByDescending<TaskWithSubtasksUi> { it.isHighPriority }
+                .thenBy { it.deadlineAt },
+        )
+    val upcoming = filter { !it.isCompleted && it.deadlineAt != null && !it.isDeadlineOverdue }
+        .sortedWith(
+            compareBy<TaskWithSubtasksUi> { it.deadlineAt }
+                .thenByDescending { it.isHighPriority },
+        )
+    val noDeadline = filter { !it.isCompleted && it.deadlineAt == null }
+        .sortedWith(
+            compareByDescending<TaskWithSubtasksUi> { it.isHighPriority }
+                .thenBy { it.createdAt },
+        )
+    val completed = filter { it.isCompleted }
+        .sortedByDescending { it.createdAt }
+    return overdue + upcoming + noDeadline + completed
+}
+
+private fun List<TaskWithSubtasksUi>.applyFilter(filter: TaskListFilter): List<TaskWithSubtasksUi> =
+    when (filter) {
+        TaskListFilter.ALL -> this
+        TaskListFilter.ACTIVE -> filter { !it.isCompleted }
+        TaskListFilter.OVERDUE -> filter { it.isDeadlineOverdue }
+        TaskListFilter.COMPLETED -> filter { it.isCompleted }
+    }

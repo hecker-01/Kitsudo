@@ -2,6 +2,7 @@ package dev.heckr.kitsudo.data.mapper
 
 import dev.heckr.kitsudo.data.local.entity.TaskEntity
 import dev.heckr.kitsudo.data.local.entity.TaskWithSubtasksEntity
+import dev.heckr.kitsudo.domain.model.Priority
 import dev.heckr.kitsudo.domain.model.SyncStatus
 import dev.heckr.kitsudo.domain.model.Task
 import dev.heckr.kitsudo.domain.model.TaskWithSubtasks
@@ -16,6 +17,7 @@ fun TaskEntity.toDomain(): Task = Task(
     parentId = parentId,
     deadlineAt = deadlineAt,
     sortOrder = sortOrder,
+    priority = Priority.fromDb(priority),
 )
 
 fun Task.toEntity(): TaskEntity = TaskEntity(
@@ -28,6 +30,7 @@ fun Task.toEntity(): TaskEntity = TaskEntity(
     parentId = parentId,
     deadlineAt = deadlineAt,
     sortOrder = sortOrder,
+    priority = priority.dbValue,
 )
 
 fun TaskWithSubtasksEntity.toDomain(): TaskWithSubtasks = TaskWithSubtasks(

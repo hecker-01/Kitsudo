@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.heckr.kitsudo.data.notification.NotificationScheduler
+import dev.heckr.kitsudo.domain.model.Priority
 import dev.heckr.kitsudo.domain.repository.TaskRepository
 import dev.heckr.kitsudo.domain.usecase.CascadeCompleteUseCase
 import dev.heckr.kitsudo.domain.usecase.CompleteTaskUseCase
@@ -142,6 +143,14 @@ class TaskDetailViewModel @Inject constructor(
         viewModelScope.launch {
             notificationScheduler.cancel(subtaskId)
             deleteTaskUseCase(subtaskId)
+        }
+    }
+
+    fun togglePriority() {
+        viewModelScope.launch {
+            val task = taskRepository.getTaskById(taskId) ?: return@launch
+            val newPriority = if (task.priority == Priority.HIGH) Priority.NORMAL else Priority.HIGH
+            updateTaskUseCase(task.copy(priority = newPriority))
         }
     }
 

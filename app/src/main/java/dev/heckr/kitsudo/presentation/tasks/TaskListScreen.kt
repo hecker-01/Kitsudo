@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,18 +16,23 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -49,11 +55,11 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.heckr.kitsudo.R
+import dev.heckr.kitsudo.domain.model.Priority
 import dev.heckr.kitsudo.domain.model.SyncStatus
 import dev.heckr.kitsudo.presentation.tasks.components.AddTaskSheet
 import dev.heckr.kitsudo.presentation.tasks.components.DeadlineChip
@@ -89,6 +95,7 @@ fun TaskListScreen(
         onToggleComplete = viewModel::toggleComplete,
         onToggleSubtaskComplete = viewModel::toggleSubtaskComplete,
         onDeleteTask = viewModel::deleteTask,
+        onSetFilter = viewModel::setFilter,
         modifier = modifier,
     )
 }
@@ -105,6 +112,7 @@ private fun TaskListContent(
     onToggleComplete: (taskId: String, Boolean) -> Unit,
     onToggleSubtaskComplete: (subtaskId: String, Boolean) -> Unit,
     onDeleteTask: (taskId: String) -> Unit,
+    onSetFilter: (TaskListFilter) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -128,23 +136,74 @@ private fun TaskListContent(
         },
         modifier = modifier,
     ) { innerPadding ->
-        when {
-            uiState.isLoading -> LoadingIndicator(Modifier.padding(innerPadding))
-            uiState.error != null -> ErrorMessage(uiState.error, Modifier.padding(innerPadding))
-            uiState.tasks.isEmpty() -> EmptyState(Modifier.padding(innerPadding))
-            else -> TaskList(
-                tasks = uiState.tasks,
-                onOpenTask = onOpenTask,
-                onToggleComplete = onToggleComplete,
-                onToggleSubtaskComplete = onToggleSubtaskComplete,
-                onDeleteTask = onDeleteTask,
-                modifier = Modifier.padding(innerPadding),
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            // ── Filter chip row ────────────────────────────────────────────
+            FilterChipRow(
+                currentFilter = uiState.filter,
+                overdueCount = uiState.overdueCount,
+                onFilterSelected = onSetFilter,
             )
+
+            // ── Task list / states ─────────────────────────────────────────
+            when {
+                uiState.isLoading -> LoadingIndicator(Modifier.weight(1f))
+                uiState.error != null -> ErrorMessage(uiState.error, Modifier.weight(1f))
+                uiState.tasks.isEmpty() -> EmptyState(
+                    filter = uiState.filter,
+                    modifier = Modifier.weight(1f),
+                )
+                else -> TaskList(
+                    tasks = uiState.tasks,
+                    onOpenTask = onOpenTask,
+                    onToggleComplete = onToggleComplete,
+                    onToggleSubtaskComplete = onToggleSubtaskComplete,
+                    onDeleteTask = onDeleteTask,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 
     if (uiState.showAddSheet) {
         AddTaskSheet(onAdd = onAddTask, onDismiss = onHideAddSheet)
+    }
+}
+
+// ── Filter chip row ────────────────────────────────────────────────────────
+
+@Composable
+private fun FilterChipRow(
+    currentFilter: TaskListFilter,
+    overdueCount: Int,
+    onFilterSelected: (TaskListFilter) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val view = LocalView.current
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+    ) {
+        TaskListFilter.entries.forEach { filter ->
+            val label = if (filter == TaskListFilter.OVERDUE && overdueCount > 0) {
+                stringResource(filter.labelRes()) + " ($overdueCount)"
+            } else {
+                stringResource(filter.labelRes())
+            }
+            FilterChip(
+                selected = currentFilter == filter,
+                onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    onFilterSelected(filter)
+                },
+                label = { Text(label) },
+            )
+        }
     }
 }
 
@@ -195,6 +254,22 @@ private fun TaskCard(
     val view = LocalView.current
 
     Column(modifier = modifier.fillMaxWidth()) {
+        // Thin accent bar — error colour for overdue, primary for high-priority-only
+        when {
+            task.isDeadlineOverdue -> Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(MaterialTheme.colorScheme.error),
+            )
+            task.isHighPriority && !task.isCompleted -> Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(MaterialTheme.colorScheme.primary),
+            )
+        }
+
         // ── Swipeable header (action fires on finger lift only) ────────
         SwipeActionBox(
             onSwipeLeft = onDelete,
@@ -233,15 +308,28 @@ private fun TaskCard(
                             .weight(1f)
                             .padding(start = 4.dp),
                     ) {
-                        Text(
-                            text = task.title,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            textDecoration = if (task.isCompleted) TextDecoration.LineThrough
-                            else null,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        // Title + optional priority star
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (task.isHighPriority && !task.isCompleted) {
+                                Icon(
+                                    Icons.Filled.Star,
+                                    contentDescription = stringResource(R.string.task_priority_high),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .padding(end = 3.dp),
+                                )
+                            }
+                            Text(
+                                text = task.title,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textDecoration = if (task.isCompleted) TextDecoration.LineThrough
+                                else null,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                         if (task.description.isNotBlank()) {
                             Text(
                                 text = task.description,
@@ -451,10 +539,17 @@ private fun ErrorMessage(message: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun EmptyState(modifier: Modifier = Modifier) {
+private fun EmptyState(filter: TaskListFilter, modifier: Modifier = Modifier) {
     Box(contentAlignment = Alignment.Center, modifier = modifier.fillMaxSize()) {
         Text(
-            text = stringResource(R.string.task_list_empty),
+            text = stringResource(
+                when (filter) {
+                    TaskListFilter.ALL -> R.string.task_list_empty
+                    TaskListFilter.ACTIVE -> R.string.task_filter_empty_active
+                    TaskListFilter.OVERDUE -> R.string.task_filter_empty_overdue
+                    TaskListFilter.COMPLETED -> R.string.task_filter_empty_completed
+                },
+            ),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -463,7 +558,8 @@ private fun EmptyState(modifier: Modifier = Modifier) {
 
 // ── Preview ────────────────────────────────────────────────────────────────
 
-@Preview(showBackground = true)
+@OptIn(ExperimentalMaterial3Api::class)
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
 @Composable
 private fun TaskListPreview() {
     KitsudoTheme {
@@ -473,12 +569,13 @@ private fun TaskListPreview() {
                     TaskWithSubtasksUi(
                         id = "1", title = "Buy groceries", description = "Milk, eggs",
                         isCompleted = false, deadlineAt = null, isDeadlineOverdue = false,
-                        syncStatus = SyncStatus.SYNCED,
+                        syncStatus = SyncStatus.SYNCED, priority = Priority.HIGH,
+                        createdAt = System.currentTimeMillis(),
                         subtasks = listOf(
                             TaskUi(
                                 id = "1a", title = "Milk", description = "",
                                 isCompleted = true, deadlineAt = null, isDeadlineOverdue = false,
-                                syncStatus = SyncStatus.SYNCED,
+                                syncStatus = SyncStatus.SYNCED, priority = Priority.NORMAL,
                             ),
                         ),
                     ),
@@ -489,6 +586,7 @@ private fun TaskListPreview() {
             onToggleComplete = { _, _ -> },
             onToggleSubtaskComplete = { _, _ -> },
             onDeleteTask = {},
+            onSetFilter = {},
         )
     }
 }

@@ -18,3 +18,16 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         )
     }
 }
+
+/**
+ * v2 → v3: adds the priority column.
+ *
+ * Existing rows default to 0 (Priority.NORMAL).
+ */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL(
+            "ALTER TABLE tasks ADD COLUMN priority INTEGER NOT NULL DEFAULT 0",
+        )
+    }
+}

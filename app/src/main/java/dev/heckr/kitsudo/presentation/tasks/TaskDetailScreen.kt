@@ -18,6 +18,7 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -84,6 +85,7 @@ fun TaskDetailScreen(
         onDescriptionChange = viewModel::saveDescription,
         onSetDeadline = viewModel::setDeadline,
         onToggleComplete = viewModel::toggleComplete,
+        onTogglePriority = viewModel::togglePriority,
         onAddSubtask = viewModel::addSubtask,
         onToggleSubtask = viewModel::toggleSubtaskComplete,
         onSetSubtaskDeadline = viewModel::setSubtaskDeadline,
@@ -103,6 +105,7 @@ private fun TaskDetailContent(
     onDescriptionChange: (String) -> Unit,
     onSetDeadline: (Long?) -> Unit,
     onToggleComplete: (Boolean) -> Unit,
+    onTogglePriority: () -> Unit,
     onAddSubtask: (String) -> Unit,
     onToggleSubtask: (String, Boolean) -> Unit,
     onSetSubtaskDeadline: (subtaskId: String, deadlineAt: Long?) -> Unit,
@@ -160,7 +163,7 @@ private fun TaskDetailContent(
                 .padding(16.dp)
                 .imePadding(),
         ) {
-            // ── Completion toggle ──────────────────────────────────────
+            // ── Completion toggle + priority ───────────────────────────
             SectionCard {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -185,8 +188,33 @@ private fun TaskDetailContent(
                         ),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(start = 4.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 4.dp),
                     )
+                    // Priority star — HIGH = filled primary, NORMAL = dimmed
+                    IconButton(
+                        onClick = {
+                            view.performHapticFeedback(
+                                if (task.isHighPriority) HapticFeedbackConstants.TOGGLE_OFF
+                                else HapticFeedbackConstants.TOGGLE_ON,
+                            )
+                            onTogglePriority()
+                        },
+                    ) {
+                        Icon(
+                            Icons.Filled.Star,
+                            contentDescription = stringResource(
+                                if (task.isHighPriority) R.string.task_priority_remove
+                                else R.string.task_priority_set,
+                            ),
+                            tint = if (task.isHighPriority) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+                            },
+                        )
+                    }
                 }
             }
 

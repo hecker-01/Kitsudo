@@ -17,4 +17,6 @@ data class TaskEntity(
     val deadlineAt: Long?,
     /** Ascending display order within a parent or among top-level tasks. */
     val sortOrder: Int,
+    /** 0 = NORMAL, 1 = HIGH. Maps to Priority enum via Priority.fromDb(). */
+    val priority: Int = 0,
 )

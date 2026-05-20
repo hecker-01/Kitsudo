@@ -13,4 +13,6 @@ data class Task(
     val deadlineAt: Long? = null,
     /** Ascending order within a parent (or among top-level tasks). */
     val sortOrder: Int = 0,
+    /** User-set importance. HIGH tasks float above NORMAL within each sort bucket. */
+    val priority: Priority = Priority.NORMAL,
 )
