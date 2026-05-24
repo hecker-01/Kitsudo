@@ -82,7 +82,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { setAccentUseCase(accent) }
     }
 
-    // ── Notification preferences ───────────────────────────────────────
+    // -- Notification preferences ---------------------------------------
 
     fun setPreReminderLeadMinutes(minutes: Int) {
         viewModelScope.launch { updateNotificationPreferenceUseCase.setPreReminderLeadMinutes(minutes) }

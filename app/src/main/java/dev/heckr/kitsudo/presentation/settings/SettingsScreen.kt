@@ -88,7 +88,7 @@ private val darkPalettes = listOf(
     ThemePalette.MOCHA,
 )
 
-// ── Entry composable ───────────────────────────────────────────────────────
+// -- Entry composable -------------------------------------------------------
 
 @Composable
 fun SettingsScreen(
@@ -125,7 +125,7 @@ fun SettingsScreen(
     )
 }
 
-// ── Content ────────────────────────────────────────────────────────────────
+// -- Content ----------------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -178,7 +178,7 @@ private fun SettingsContent(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp),
             ) {
-                // ── Scrollable content — measured so we know how much room is left ──
+                // -- Scrollable content - measured so we know how much room is left --
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -186,7 +186,7 @@ private fun SettingsContent(
                             with(density) { contentHeight = size.height.toDp() }
                         },
                 ) {
-                    // ── Appearance ────────────────────────────────────────────
+                    // -- Appearance --------------------------------------------
                     SectionLabel(stringResource(R.string.settings_section_appearance))
                     AppearanceCard(
                         palette = uiState.palette,
@@ -195,7 +195,7 @@ private fun SettingsContent(
                         onAccentChange = onAccentChange,
                     )
 
-                    // ── Notifications ─────────────────────────────────────────
+                    // -- Notifications -----------------------------------------
                     SectionLabel(stringResource(R.string.settings_section_notifications))
                     NotificationCard(
                         prefs = uiState.notifications,
@@ -206,11 +206,11 @@ private fun SettingsContent(
                         onSetSnoozeMinutes = onSetSnoozeMinutes,
                     )
 
-                    // ── Updates ───────────────────────────────────────────────
+                    // -- Updates -----------------------------------------------
                     SectionLabel(stringResource(R.string.settings_section_updates))
                     UpdateCard(status = uiState.updateStatus, onTap = onUpdateCardTapped)
 
-                    // ── About ─────────────────────────────────────────────────
+                    // -- About -------------------------------------------------
                     SectionLabel(stringResource(R.string.settings_section_about))
                     AboutCard(uiState = uiState)
                 }
@@ -225,7 +225,7 @@ private fun SettingsContent(
                     ),
                 )
 
-                // Footer — always inline in the scroll column, never a floating overlay.
+                // Footer - always inline in the scroll column, never a floating overlay.
                 SettingsFooter(
                     modifier = Modifier.onSizeChanged { size ->
                         with(density) { footerHeight = size.height.toDp() }
@@ -243,7 +243,7 @@ private fun SettingsContent(
     }
 }
 
-// ── Section header ─────────────────────────────────────────────────────────
+// -- Section header ---------------------------------------------------------
 
 @Composable
 private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
@@ -255,7 +255,7 @@ private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** Card title inside a section card — always full-brightness. */
+/** Card title inside a section card - always full-brightness. */
 @Composable
 private fun CardTitle(text: String, modifier: Modifier = Modifier) {
     Text(
@@ -266,7 +266,7 @@ private fun CardTitle(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-// ── Appearance card ────────────────────────────────────────────────────────
+// -- Appearance card --------------------------------------------------------
 
 @Composable
 private fun AppearanceCard(
@@ -292,7 +292,7 @@ private fun AppearanceCard(
             CardTitle(stringResource(R.string.settings_theme_title))
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ── Top-level: Material You vs Catppuccin ──────────────────
+            // -- Top-level: Material You vs Catppuccin ------------------
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -311,7 +311,7 @@ private fun AppearanceCard(
                 )
             }
 
-            // ── Material You note ──────────────────────────────────────
+            // -- Material You note --------------------------------------
             AnimatedVisibility(visible = !palette.isCatppuccin) {
                 Text(
                     text = stringResource(R.string.theme_palette_material3_hint),
@@ -321,12 +321,12 @@ private fun AppearanceCard(
                 )
             }
 
-            // ── Catppuccin section ─────────────────────────────────────
+            // -- Catppuccin section -------------------------------------
             AnimatedVisibility(visible = palette.isCatppuccin) {
                 Column {
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Dark mode switch (M3 Expressive — icon thumb when checked)
+                    // Dark mode switch (M3 Expressive - icon thumb when checked)
                     DarkModeRow(
                         isDark = palette.isDark,
                         onToggle = { dark ->
@@ -359,7 +359,7 @@ private fun AppearanceCard(
                         }
                     }
 
-                    // ── Accent color dropdown ──────────────────────────────
+                    // -- Accent color dropdown ------------------------------
                     Spacer(modifier = Modifier.height(12.dp))
                     AccentDropdown(
                         palette = palette,
@@ -372,7 +372,7 @@ private fun AppearanceCard(
     }
 }
 
-// ── Accent dropdown ────────────────────────────────────────────────────────
+// -- Accent dropdown --------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -448,7 +448,7 @@ private fun AccentDropdown(
     }
 }
 
-// ── Dark mode switch (M3 Expressive) ──────────────────────────────────────
+// -- Dark mode switch (M3 Expressive) --------------------------------------
 
 @Composable
 private fun DarkModeRow(
@@ -496,7 +496,7 @@ private fun DarkModeRow(
     }
 }
 
-// ── Frappé / Macchiato / Mocha card row ───────────────────────────────────
+// -- Frappé / Macchiato / Mocha card row -----------------------------------
 
 @Composable
 private fun DarkFlavorRow(
@@ -519,7 +519,7 @@ private fun DarkFlavorRow(
     }
 }
 
-// ── Theme option card (shared by both picker rows) ─────────────────────────
+// -- Theme option card (shared by both picker rows) -------------------------
 
 @Composable
 private fun ThemeOptionCard(
@@ -578,7 +578,7 @@ private fun ThemeOptionCard(
     }
 }
 
-// ── Updates card ───────────────────────────────────────────────────────────
+// -- Updates card -----------------------------------------------------------
 
 @Composable
 private fun UpdateCard(
@@ -652,7 +652,7 @@ private fun updateSubtitle(status: AppUpdater.Status): String = when (status) {
         stringResource(R.string.settings_updates_error_format, status.message)
 }
 
-// ── About card ─────────────────────────────────────────────────────────────
+// -- About card -------------------------------------------------------------
 
 @Composable
 private fun AboutCard(
@@ -702,7 +702,7 @@ private fun AboutCard(
     }
 }
 
-// ── Update confirm dialog ──────────────────────────────────────────────────
+// -- Update confirm dialog --------------------------------------------------
 
 @Composable
 private fun UpdateConfirmDialog(
@@ -750,7 +750,7 @@ private fun UpdateConfirmDialog(
     )
 }
 
-// ── Footer (always pinned to screen bottom) ────────────────────────────────
+// -- Footer (always pinned to screen bottom) --------------------------------
 
 @Composable
 private fun SettingsFooter(modifier: Modifier = Modifier) {
@@ -768,7 +768,7 @@ private fun SettingsFooter(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        // Explicit spacer — trailing spaces in XML string resources are trimmed by AAPT
+        // Explicit spacer - trailing spaces in XML string resources are trimmed by AAPT
         Spacer(Modifier.width(4.dp))
         Text(
             text = stringResource(R.string.settings_footer_link),
@@ -785,7 +785,7 @@ private fun SettingsFooter(modifier: Modifier = Modifier) {
     }
 }
 
-// ── Previews ───────────────────────────────────────────────────────────────
+// -- Previews ---------------------------------------------------------------
 
 @Preview(showBackground = true)
 @Composable

@@ -34,7 +34,7 @@ enum class SwipeDirection { Left, Right }
  * finger** past [thresholdFraction] of the row width.
  *
  * Key design decisions:
- * - `pointerInput(Unit)` — the gesture block is created once and never
+ * - `pointerInput(Unit)` - the gesture block is created once and never
  *   restarted due to lambda re-creation on recomposition.  Callbacks are read
  *   through [rememberUpdatedState] so they're always current.
  * - Left swipe (destructive): content slides fully off-screen FIRST, then the
@@ -88,7 +88,7 @@ fun SwipeActionBox(
             backgroundContent(swipeDirection)
         }
 
-        // Foreground — follows the finger; its opaque surface always masks
+        // Foreground - follows the finger; its opaque surface always masks
         // the background until it slides completely off screen.
         Box(
             modifier = Modifier
@@ -129,7 +129,7 @@ fun SwipeActionBox(
                                     }
                                 }
                                 else -> {
-                                    // Below threshold — spring back, no action.
+                                    // Below threshold - spring back, no action.
                                     scope.launch {
                                         offsetX.animateTo(
                                             targetValue = 0f,

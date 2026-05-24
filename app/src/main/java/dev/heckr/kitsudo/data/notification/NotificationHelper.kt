@@ -64,7 +64,7 @@ class NotificationHelper @Inject constructor(
      *
      * When [parentId] is non-null (i.e. this is a subtask):
      *  - Body shows "Part of: [parentTitle]" instead of the generic copy.
-     *  - Priority is DEFAULT rather than HIGH — no heads-up banner for secondary items.
+     *  - Priority is DEFAULT rather than HIGH - no heads-up banner for secondary items.
      *  - Notification is placed in a group keyed to [parentId] so multiple subtask
      *    notifications collapse together in the shade.
      *  - No follow-up chain is scheduled (handled in the worker).

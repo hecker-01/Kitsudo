@@ -1,7 +1,7 @@
 [versions]
 agp = "9.1.0"
 kotlin = "2.2.10"
-# KSP version must match Kotlin version prefix — update if Kotlin version changes
+# KSP version must match Kotlin version prefix - update if Kotlin version changes
 ksp = "2.2.10-2.0.2"
 composeBom = "2026.02.01"
 coreKtx = "1.16.0"

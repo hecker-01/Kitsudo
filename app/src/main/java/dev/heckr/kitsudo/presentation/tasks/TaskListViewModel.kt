@@ -105,14 +105,14 @@ class TaskListViewModel @Inject constructor(
     }
 }
 
-// ── Smart sort ─────────────────────────────────────────────────────────────
+// -- Smart sort -------------------------------------------------------------
 
 /**
  * Groups tasks into four ordered buckets:
- *  1. Overdue incomplete  — nearest deadline first, HIGH priority breaks ties
- *  2. Upcoming deadline incomplete — soonest deadline first, HIGH priority breaks ties
- *  3. No-deadline incomplete — HIGH priority first, then by creation time
- *  4. Completed — most recently created first
+ *  1. Overdue incomplete  - nearest deadline first, HIGH priority breaks ties
+ *  2. Upcoming deadline incomplete - soonest deadline first, HIGH priority breaks ties
+ *  3. No-deadline incomplete - HIGH priority first, then by creation time
+ *  4. Completed - most recently created first
  */
 private fun List<TaskWithSubtasksUi>.smartSorted(): List<TaskWithSubtasksUi> {
     val overdue = filter { !it.isCompleted && it.isDeadlineOverdue }

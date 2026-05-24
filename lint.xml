@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <lint>
-    <!-- Treat hardcoded text as an error — all strings must be in strings.xml -->
+    <!-- Treat hardcoded text as an error - all strings must be in strings.xml -->
     <issue id="HardcodedText" severity="error" />
 
     <!-- Treat missing content descriptions as an error -->
@@ -12,6 +12,6 @@
     <!-- Enforce correct coroutine usage -->
     <issue id="GlobalCoroutineUsage" severity="error" />
 
-    <!-- Treat missing translations as warnings — app is single-language for now -->
+    <!-- Treat missing translations as warnings - app is single-language for now -->
     <issue id="MissingTranslation" severity="warning" />
 </lint>

@@ -65,7 +65,7 @@ class AppUpdater @Inject constructor() {
         }
     }
 
-    /** Call from ViewModel.init — syncs state with whatever UpdateChecker already knows. */
+    /** Call from ViewModel.init - syncs state with whatever UpdateChecker already knows. */
     fun syncFromChecker() {
         _status.value = when {
             UpdateChecker.updateAvailable ->
@@ -126,7 +126,7 @@ class AppUpdater @Inject constructor() {
         }
     }
 
-    // ── Download ──────────────────────────────────────────────────────────────
+    // -- Download --------------------------------------------------------------
 
     private fun downloadApk(context: Context, apkUrl: String, version: String) {
         val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -201,7 +201,7 @@ class AppUpdater @Inject constructor() {
         }
     }
 
-    // ── Install ───────────────────────────────────────────────────────────────
+    // -- Install ---------------------------------------------------------------
 
     private fun installApk(context: Context, file: File) {
         try {

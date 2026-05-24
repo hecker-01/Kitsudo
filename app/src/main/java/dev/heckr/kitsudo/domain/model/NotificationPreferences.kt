@@ -2,7 +2,7 @@ package dev.heckr.kitsudo.domain.model
 
 /**
  * Global, user-tunable notification settings. Per-task overrides are intentionally
- * not supported — every task with a deadline uses these values.
+ * not supported - every task with a deadline uses these values.
  *
  * @param preReminderLeadMinutes 0 = no pre-reminder; otherwise minutes before the
  *   deadline to fire an extra notification. Allowed values match the UI chip row:
@@ -11,7 +11,7 @@ package dev.heckr.kitsudo.domain.model
  *   [quietStartMinutes]..[quietEndMinutes] are deferred until the window ends.
  * @param quietStartMinutes Minutes from midnight (0..1439).
  * @param quietEndMinutes Minutes from midnight (0..1439). May be less than
- *   [quietStartMinutes] — the window crosses midnight in that case.
+ *   [quietStartMinutes] - the window crosses midnight in that case.
  * @param snoozeMinutes How long the Snooze notification action defers the
  *   notification before re-firing it.
  */

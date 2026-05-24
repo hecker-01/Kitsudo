@@ -13,7 +13,7 @@ val gitCommitCount = providers.exec {
     commandLine("git", "rev-list", "--count", "HEAD")
 }.standardOutput.asText.get().trim().toInt()
 
-// ── Signing ────────────────────────────────────────────────────────────────
+// -- Signing ----------------------------------------------------------------
 // Credentials are read from local.properties (gitignored) so they never
 // appear in source control. The release build will simply be unsigned if
 // the file or any key is missing (safe for CI forks / open-source clones).
@@ -39,7 +39,7 @@ android {
         minSdk = 33
         targetSdk = 36
         versionCode = gitCommitCount
-        versionName = "1.0.0"
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "com.google.dagger.hilt.android.testing.HiltTestRunner"
     }

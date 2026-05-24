@@ -63,13 +63,13 @@ class DeadlineNotificationWorker @AssistedInject constructor(
         val parentTitle = inputData.getString(KEY_PARENT_TASK_TITLE)
 
         val task = taskRepository.getTaskById(taskId)
-            ?: return Result.success() // task was deleted — nothing to notify
+            ?: return Result.success() // task was deleted - nothing to notify
         if (task.isCompleted) return Result.success() // already done
 
         val prefs = preferencesRepository.observe().first()
         val now = System.currentTimeMillis()
 
-        // ── Quiet hours: re-schedule self for the end of the window ────
+        // -- Quiet hours: re-schedule self for the end of the window ----
         if (QuietHours.isInside(now, prefs)) {
             val deferUntil = QuietHours.nextEndAfter(now, prefs)
             val deferDelay = deferUntil - now
@@ -97,11 +97,11 @@ class DeadlineNotificationWorker @AssistedInject constructor(
             return Result.success()
         }
 
-        // ── Fire the actual notification ───────────────────────────────
+        // -- Fire the actual notification -------------------------------
         notificationHelper.showNotification(taskId, taskTitle, kind, parentId, parentTitle)
 
-        // ── Chain a follow-up after MAIN / FOLLOWUP (not after PRE, not for subtasks) ────
-        // Subtasks only get a single MAIN ping — no recurring follow-up spam for secondary items.
+        // -- Chain a follow-up after MAIN / FOLLOWUP (not after PRE, not for subtasks) ----
+        // Subtasks only get a single MAIN ping - no recurring follow-up spam for secondary items.
         if (parentId == null && (kind == NotificationKind.MAIN || kind == NotificationKind.FOLLOWUP)) {
             val nextAttempt = if (kind == NotificationKind.MAIN) 1 else followupAttempt + 1
             if (nextAttempt <= MAX_FOLLOWUP_ATTEMPTS) {

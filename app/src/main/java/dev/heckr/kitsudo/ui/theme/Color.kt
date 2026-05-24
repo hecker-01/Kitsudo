@@ -120,13 +120,13 @@ object Mocha {
     val Crust     = Color(0xFF11111B)
 }
 
-// ── Accent color lookup ────────────────────────────────────────────────────
+// -- Accent color lookup ----------------------------------------------------
 //
 // Returns the correct ARGB value for a [CatppuccinAccent] in the given
 // [ThemePalette]. Each flavor has its own shade of every accent name.
 
 fun accentColor(palette: ThemePalette, accent: CatppuccinAccent): Color = when (palette) {
-    ThemePalette.MATERIAL3 -> Color.Unspecified // unused — M3 uses dynamic colors
+    ThemePalette.MATERIAL3 -> Color.Unspecified // unused - M3 uses dynamic colors
     ThemePalette.LATTE     -> accentForLatte(accent)
     ThemePalette.FRAPPE    -> accentForFrappe(accent)
     ThemePalette.MACCHIATO -> accentForMacchiato(accent)

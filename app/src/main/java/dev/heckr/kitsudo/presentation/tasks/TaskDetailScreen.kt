@@ -114,7 +114,7 @@ private fun TaskDetailContent(
     onDeleteTask: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Local field state — seeded from the live task, but NOT reset on every recomposition.
+    // Local field state - seeded from the live task, but NOT reset on every recomposition.
     // rememberSaveable(task.id) resets only when a *different* task is opened.
     var titleField by rememberSaveable(task.id) { mutableStateOf(task.title) }
     var descriptionField by rememberSaveable(task.id) { mutableStateOf(task.description) }
@@ -164,7 +164,7 @@ private fun TaskDetailContent(
                 .padding(16.dp)
                 .imePadding(),
         ) {
-            // ── Completion toggle + priority ───────────────────────────
+            // -- Completion toggle + priority ---------------------------
             SectionCard {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -193,7 +193,7 @@ private fun TaskDetailContent(
                             .weight(1f)
                             .padding(start = 4.dp),
                     )
-                    // Priority star — HIGH = filled primary, NORMAL = dimmed
+                    // Priority star - HIGH = filled primary, NORMAL = dimmed
                     IconButton(
                         onClick = {
                             view.performHapticFeedback(
@@ -219,7 +219,7 @@ private fun TaskDetailContent(
                 }
             }
 
-            // ── Title & description ────────────────────────────────────
+            // -- Title & description ------------------------------------
             SectionCard {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -256,7 +256,7 @@ private fun TaskDetailContent(
                 }
             }
 
-            // ── Deadline ───────────────────────────────────────────────
+            // -- Deadline -----------------------------------------------
             SectionCard {
                 Column(modifier = Modifier.padding(16.dp)) {
                     SectionTitle(stringResource(R.string.task_deadline_label))
@@ -271,7 +271,7 @@ private fun TaskDetailContent(
                         Spacer(Modifier.height(8.dp))
                     }
 
-                    // Action buttons always on their own line — no overflow risk
+                    // Action buttons always on their own line - no overflow risk
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilledTonalButton(
                             onClick = { showDeadlinePicker = true },
@@ -298,7 +298,7 @@ private fun TaskDetailContent(
                 }
             }
 
-            // ── Subtasks ───────────────────────────────────────────────
+            // -- Subtasks -----------------------------------------------
             SectionCard {
                 Column(modifier = Modifier.padding(16.dp)) {
                     SectionTitle(
@@ -377,7 +377,7 @@ private fun TaskDetailContent(
     }
 }
 
-// ── Shared card wrapper ────────────────────────────────────────────────────
+// -- Shared card wrapper ----------------------------------------------------
 
 /**
  * All detail cards use the same container/content colors.
@@ -399,7 +399,7 @@ private fun SectionCard(
     )
 }
 
-/** Section heading inside a card — always uses [onSurface] so it stands out. */
+/** Section heading inside a card - always uses [onSurface] so it stands out. */
 @Composable
 private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(
@@ -410,7 +410,7 @@ private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-// ── Subtask row ────────────────────────────────────────────────────────────
+// -- Subtask row ------------------------------------------------------------
 
 @Composable
 private fun SubtaskRow(
@@ -457,7 +457,7 @@ private fun SubtaskRow(
                     )
                 }
             }
-            // Calendar icon — tap to set/change deadline
+            // Calendar icon - tap to set/change deadline
             IconButton(onClick = { showPicker = true }) {
                 Icon(
                     Icons.Filled.DateRange,

@@ -29,7 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew detekt
 ```
 
-`versionCode` is derived from `git rev-list --count HEAD` in `app/build.gradle.kts` — no manual bump needed.
+`versionCode` is derived from `git rev-list --count HEAD` in `app/build.gradle.kts` - no manual bump needed.
 
 ---
 
@@ -64,13 +64,13 @@ app/src/main/java/dev/heckr/kitsudo/
 
 ### Theme system
 
-`ThemePalette` (domain model) is the single persisted type — stored as its enum `name` under the key `"theme_flavor"` in DataStore. Values: `MATERIAL3`, `LATTE`, `FRAPPE`, `MACCHIATO`, `MOCHA`.
+`ThemePalette` (domain model) is the single persisted type - stored as its enum `name` under the key `"theme_flavor"` in DataStore. Values: `MATERIAL3`, `LATTE`, `FRAPPE`, `MACCHIATO`, `MOCHA`.
 
 `KitsudoTheme` in `ui/theme/Theme.kt` maps `ThemePalette` to a `ColorScheme`:
 - `MATERIAL3` → `dynamicDark/LightColorScheme(context)` (always available, min SDK 33)
 - Others → hand-crafted Catppuccin schemes
 
-`ThemeViewModel` lives in `MainActivity` (activity-scoped) and wraps the whole composition in `KitsudoTheme`. `SettingsViewModel` independently reads/writes the same DataStore key — both stay in sync because DataStore emits to all active collectors.
+`ThemeViewModel` lives in `MainActivity` (activity-scoped) and wraps the whole composition in `KitsudoTheme`. `SettingsViewModel` independently reads/writes the same DataStore key - both stay in sync because DataStore emits to all active collectors.
 
 `CatppuccinFlavor` still exists as a domain model but is only used by the color scheme functions in `Theme.kt`. All public API uses `ThemePalette`.
 
@@ -80,7 +80,7 @@ app/src/main/java/dev/heckr/kitsudo/
 
 Room schema is at **version 2**. Migration 1→2 (`data/local/migration/Migrations.kt`) adds `parentId`, `deadlineAt`, `sortOrder` via `ALTER TABLE`. Never use `fallbackToDestructiveMigration`.
 
-`TaskDao.observeTaskById()` returns `Flow<TaskEntity?>` — used in `TaskDetailViewModel` to keep the detail screen reactive after edits.
+`TaskDao.observeTaskById()` returns `Flow<TaskEntity?>` - used in `TaskDetailViewModel` to keep the detail screen reactive after edits.
 
 ### Cascade completion
 
@@ -93,7 +93,7 @@ Both `TaskListViewModel` and `TaskDetailViewModel` route all checkbox toggles th
 
 ### Notifications
 
-`DeadlineNotificationWorker` is a `@HiltWorker`. `KitsudoApplication` implements `Configuration.Provider` and provides `HiltWorkerFactory` — this replaces the default WorkManager initializer. The manifest disables `WorkManagerInitializer` via `tools:node="remove"`.
+`DeadlineNotificationWorker` is a `@HiltWorker`. `KitsudoApplication` implements `Configuration.Provider` and provides `HiltWorkerFactory` - this replaces the default WorkManager initializer. The manifest disables `WorkManagerInitializer` via `tools:node="remove"`.
 
 `NotificationScheduler` uses `WorkManager.enqueueUniqueWork` tagged `"deadline_<taskId>"` so cancellation is straightforward.
 
@@ -101,17 +101,17 @@ Channel creation happens in `KitsudoApplication.onCreate()` via `NotificationHel
 
 ### In-app updater
 
-`UpdateChecker` is an `object` singleton — safe to call from `Application.onCreate()`. It hits `api.github.com/repos/hecker-01/kitsudo/releases/latest` using `HttpURLConnection` directly (no Ktor/Retrofit — the networking spec says "choose one", but for a two-endpoint update checker adding a full HTTP client was intentionally avoided).
+`UpdateChecker` is an `object` singleton - safe to call from `Application.onCreate()`. It hits `api.github.com/repos/hecker-01/kitsudo/releases/latest` using `HttpURLConnection` directly (no Ktor/Retrofit - the networking spec says "choose one", but for a two-endpoint update checker adding a full HTTP client was intentionally avoided).
 
 `AppUpdater` is a Hilt `@Singleton` that exposes `StateFlow<Status>` and `SharedFlow<Intent>` for the install-permission flow. `SettingsViewModel` collects both and surfaces them to `SettingsScreen`, which owns the `ActivityResultLauncher`.
 
 ### SwipeActionBox
 
-Custom swipe component in `presentation/tasks/components/`. **Do not replace with `SwipeToDismissBox`** — the M3 component auto-snaps at the positional threshold (mid-drag), not on finger release.
+Custom swipe component in `presentation/tasks/components/`. **Do not replace with `SwipeToDismissBox`** - the M3 component auto-snaps at the positional threshold (mid-drag), not on finger release.
 
 Critical implementation details:
-- `pointerInput(Unit)` — never restarts on recomposition. Callbacks are read via `rememberUpdatedState`.
-- Background uses `Modifier.matchParentSize()`, not `fillMaxSize()` — `fillMaxSize()` collapses to 0 height inside an unbounded `LazyColumn` item.
+- `pointerInput(Unit)` - never restarts on recomposition. Callbacks are read via `rememberUpdatedState`.
+- Background uses `Modifier.matchParentSize()`, not `fillMaxSize()` - `fillMaxSize()` collapses to 0 height inside an unbounded `LazyColumn` item.
 - Left-swipe (delete): slides content fully off-screen, *then* fires `onSwipeLeft()`. Prevents background flash when the item is removed from the list.
 - Right-swipe (complete): fires `onSwipeRight()` immediately, then springs back.
 
@@ -128,7 +128,7 @@ Three routes in `Screen.kt`:
 
 ### Detail screen auto-save
 
-`TaskDetailViewModel.saveTitle/saveDescription` use a 400 ms debounce (`saveJob?.cancel(); delay(400); updateTask()`). Text fields call these directly from `onValueChange` — there is no explicit save button. The `rememberSaveable(task.id)` key resets fields only when a *different* task is opened, not on every recomposition.
+`TaskDetailViewModel.saveTitle/saveDescription` use a 400 ms debounce (`saveJob?.cancel(); delay(400); updateTask()`). Text fields call these directly from `onValueChange` - there is no explicit save button. The `rememberSaveable(task.id)` key resets fields only when a *different* task is opened, not on every recomposition.
 
 ---
 

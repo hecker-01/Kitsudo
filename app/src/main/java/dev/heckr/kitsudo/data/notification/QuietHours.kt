@@ -10,7 +10,7 @@ import java.util.TimeZone
  * notification can be re-scheduled.
  *
  * Quiet-hours start/end are stored as **minutes from local midnight**. The
- * window may cross midnight (start = 22:00, end = 07:00) — both cases are
+ * window may cross midnight (start = 22:00, end = 07:00) - both cases are
  * handled correctly.
  *
  * All helpers are no-ops (or return [nowMillis] verbatim) when the user has

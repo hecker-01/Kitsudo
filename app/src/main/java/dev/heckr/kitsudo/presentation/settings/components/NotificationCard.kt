@@ -43,7 +43,7 @@ import dev.heckr.kitsudo.domain.model.NotificationPreferences
 
 /**
  * Settings section card for notification preferences. Visual style matches
- * `AppearanceCard` in SettingsScreen — same surfaceVariant container, same
+ * `AppearanceCard` in SettingsScreen - same surfaceVariant container, same
  * chip-style selectable options.
  *
  * All three controls are reactive: the displayed values come from [prefs];
@@ -66,7 +66,7 @@ fun NotificationCard(
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // ── Pre-reminder lead time ─────────────────────────────────
+            // -- Pre-reminder lead time ---------------------------------
             SubSectionLabel(stringResource(R.string.settings_notif_lead_title))
             Subtitle(stringResource(R.string.settings_notif_lead_subtitle))
             Spacer(Modifier.height(8.dp))
@@ -78,7 +78,7 @@ fun NotificationCard(
 
             Spacer(Modifier.height(20.dp))
 
-            // ── Quiet hours ────────────────────────────────────────────
+            // -- Quiet hours --------------------------------------------
             QuietHoursSection(
                 enabled = prefs.quietHoursEnabled,
                 startMinutes = prefs.quietStartMinutes,
@@ -90,7 +90,7 @@ fun NotificationCard(
 
             Spacer(Modifier.height(20.dp))
 
-            // ── Snooze duration ────────────────────────────────────────
+            // -- Snooze duration ----------------------------------------
             SubSectionLabel(stringResource(R.string.settings_notif_snooze_title))
             Subtitle(stringResource(R.string.settings_notif_snooze_subtitle))
             Spacer(Modifier.height(8.dp))
@@ -103,7 +103,7 @@ fun NotificationCard(
     }
 }
 
-// ── Lead-time / snooze chip-row options ────────────────────────────────────
+// -- Lead-time / snooze chip-row options ------------------------------------
 
 private data class ChipOption(val value: Int, val labelRes: Int)
 
@@ -123,7 +123,7 @@ private val SNOOZE_OPTIONS = listOf(
     ChipOption(60, R.string.settings_notif_snooze_1h),
 )
 
-// ── Pieces ─────────────────────────────────────────────────────────────────
+// -- Pieces -----------------------------------------------------------------
 
 @Composable
 private fun SubSectionLabel(text: String) {
@@ -168,7 +168,7 @@ private fun ChipRow(
 }
 
 /**
- * Same visual treatment as `ThemeOptionCard` in SettingsScreen.kt — inline
+ * Same visual treatment as `ThemeOptionCard` in SettingsScreen.kt - inline
  * check + label, primaryContainer fill when selected. Defined inline here to
  * keep the file self-contained.
  */
@@ -200,7 +200,7 @@ private fun ChipOptionCard(
         modifier = modifier,
     ) {
         // Single-select: the primaryContainer fill already makes selection obvious,
-        // so no check icon — giving the label the full width without truncation.
+        // so no check icon - giving the label the full width without truncation.
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
@@ -213,7 +213,7 @@ private fun ChipOptionCard(
     }
 }
 
-// ── Quiet hours section ────────────────────────────────────────────────────
+// -- Quiet hours section ----------------------------------------------------
 
 @Composable
 private fun QuietHoursSection(

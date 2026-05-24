@@ -19,7 +19,7 @@ data class TaskUi(
     val isHighPriority: Boolean get() = priority == Priority.HIGH
 }
 
-/** UI model for the task list — includes the live subtask list for collapsing. */
+/** UI model for the task list - includes the live subtask list for collapsing. */
 data class TaskWithSubtasksUi(
     val id: String,
     val title: String,
@@ -37,7 +37,7 @@ data class TaskWithSubtasksUi(
     val isHighPriority: Boolean get() = priority == Priority.HIGH
 }
 
-// ── Mappers ────────────────────────────────────────────────────────────────
+// -- Mappers ----------------------------------------------------------------
 
 fun Task.toUi(now: Long = System.currentTimeMillis()): TaskUi = TaskUi(
     id = id,

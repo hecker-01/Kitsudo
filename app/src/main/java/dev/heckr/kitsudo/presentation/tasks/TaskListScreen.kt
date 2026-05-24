@@ -143,14 +143,14 @@ private fun TaskListContent(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            // ── Filter chip row ────────────────────────────────────────────
+            // -- Filter chip row --------------------------------------------
             FilterChipRow(
                 currentFilter = uiState.filter,
                 overdueCount = uiState.overdueCount,
                 onFilterSelected = onSetFilter,
             )
 
-            // ── Task list / states ─────────────────────────────────────────
+            // -- Task list / states -----------------------------------------
             when {
                 uiState.isLoading -> LoadingIndicator(Modifier.weight(1f))
                 uiState.error != null -> ErrorMessage(uiState.error, Modifier.weight(1f))
@@ -175,7 +175,7 @@ private fun TaskListContent(
     }
 }
 
-// ── Filter chip row ────────────────────────────────────────────────────────
+// -- Filter chip row --------------------------------------------------------
 
 @Composable
 private fun FilterChipRow(
@@ -214,7 +214,7 @@ private fun FilterChipRow(
     }
 }
 
-// ── Task list ──────────────────────────────────────────────────────────────
+// -- Task list --------------------------------------------------------------
 
 @Composable
 private fun TaskList(
@@ -242,7 +242,7 @@ private fun TaskList(
     }
 }
 
-// ── Task card ──────────────────────────────────────────────────────────────
+// -- Task card --------------------------------------------------------------
 
 @Composable
 private fun TaskCard(
@@ -261,7 +261,7 @@ private fun TaskCard(
     val view = LocalView.current
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // Thin accent bar — error colour for overdue, primary for high-priority-only
+        // Thin accent bar - error colour for overdue, primary for high-priority-only
         when {
             task.isDeadlineOverdue -> Box(
                 modifier = Modifier
@@ -277,7 +277,7 @@ private fun TaskCard(
             )
         }
 
-        // ── Swipeable header (action fires on finger lift only) ────────
+        // -- Swipeable header (action fires on finger lift only) --------
         SwipeActionBox(
             onSwipeLeft = onDelete,
             onSwipeRight = { onToggleComplete(!task.isCompleted) },
@@ -393,7 +393,7 @@ private fun TaskCard(
             }
         }
 
-        // ── Expanded subtask list (not part of the swipe area) ─────────
+        // -- Expanded subtask list (not part of the swipe area) ---------
         AnimatedVisibility(visible = expanded && task.subtaskCount > 0) {
             Column(
                 modifier = Modifier
@@ -425,7 +425,7 @@ private fun TaskCard(
     }
 }
 
-// ── Swipe reveal backgrounds ───────────────────────────────────────────────
+// -- Swipe reveal backgrounds -----------------------------------------------
 
 @Composable
 private fun TaskSwipeBackground(
@@ -492,9 +492,9 @@ private fun TaskSwipeBackground(
     }
 }
 
-// ── Subtask count chip ─────────────────────────────────────────────────────
+// -- Subtask count chip -----------------------------------------------------
 
-/** Chip-styled subtask progress badge — matches the visual weight of DeadlineChip. */
+/** Chip-styled subtask progress badge - matches the visual weight of DeadlineChip. */
 @Composable
 private fun SubtaskCountChip(
     completed: Int,
@@ -515,7 +515,7 @@ private fun SubtaskCountChip(
     }
 }
 
-// ── Subtask row ────────────────────────────────────────────────────────────
+// -- Subtask row ------------------------------------------------------------
 
 @Composable
 private fun SubtaskListRow(
@@ -554,7 +554,7 @@ private fun SubtaskListRow(
     }
 }
 
-// ── Utility composables ────────────────────────────────────────────────────
+// -- Utility composables ----------------------------------------------------
 
 @Composable
 private fun LoadingIndicator(modifier: Modifier = Modifier) {
@@ -588,7 +588,7 @@ private fun EmptyState(filter: TaskListFilter, modifier: Modifier = Modifier) {
     }
 }
 
-// ── Preview ────────────────────────────────────────────────────────────────
+// -- Preview ----------------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3Api::class)
 @androidx.compose.ui.tooling.preview.Preview(showBackground = true)

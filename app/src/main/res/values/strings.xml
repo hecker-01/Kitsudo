@@ -4,8 +4,12 @@
 
     <!-- Task list -->
     <string name="task_list_title">Tasks</string>
-    <string name="task_list_empty">No tasks yet.\nTap + to add your first task.</string>
-    <string name="task_list_error">Something went wrong. Please try again.</string>
+    <string
+        name="task_list_empty"
+    >No tasks yet.\nTap + to add your first task.</string>
+    <string
+        name="task_list_error"
+    >Something went wrong. Please try again.</string>
 
     <!-- Task filters -->
     <string name="task_filter_all">All</string>
@@ -68,19 +72,29 @@
 
     <!-- Notifications -->
     <string name="notification_channel_name">Task deadlines</string>
-    <string name="notification_channel_description">Reminders when task deadlines arrive</string>
+    <string
+        name="notification_channel_description"
+    >Reminders when task deadlines arrive</string>
     <string name="notification_deadline_title">Due: %s</string>
-    <string name="notification_deadline_body">This task deadline has arrived.</string>
+    <string
+        name="notification_deadline_body"
+    >This task deadline has arrived.</string>
     <string name="notification_pre_title">Coming up: %s</string>
-    <string name="notification_pre_body">A task deadline is approaching.</string>
+    <string
+        name="notification_pre_body"
+    >A task deadline is approaching.</string>
     <string name="notification_overdue_title">Still overdue: %s</string>
-    <string name="notification_overdue_body">This task is past its deadline.</string>
+    <string
+        name="notification_overdue_body"
+    >This task is past its deadline.</string>
     <string name="notification_action_complete">Complete</string>
     <string name="notification_action_snooze">Snooze</string>
 
     <!-- Subtask-specific notification copy (body always shows parent title) -->
     <string name="notification_subtask_deadline_title">Subtask due: %s</string>
-    <string name="notification_subtask_overdue_title">Subtask overdue: %s</string>
+    <string
+        name="notification_subtask_overdue_title"
+    >Subtask overdue: %s</string>
     <string name="notification_subtask_body">Part of: %s</string>
 
     <!-- Accent color names (used as accessibility content descriptions for swatches) -->
@@ -103,7 +117,9 @@
     <!-- Theme palettes -->
     <string name="theme_palette_material3">Material You</string>
     <string name="theme_palette_catppuccin">Catppuccin</string>
-    <string name="theme_palette_material3_hint">Colors adapt to your wallpaper</string>
+    <string
+        name="theme_palette_material3_hint"
+    >Colors adapt to your wallpaper</string>
 
     <!-- Theme picker (dark mode switch, used in Settings) -->
     <string name="theme_dark_mode_label">Dark mode</string>
@@ -113,20 +129,24 @@
     <string name="theme_flavor_frappe">Frappé</string>
     <string name="theme_flavor_macchiato">Macchiato</string>
     <string name="theme_flavor_mocha">Mocha</string>
-    <string name="theme_flavor_selected_description">%1$s — currently selected</string>
+    <string
+        name="theme_flavor_selected_description"
+    >%1$s - currently selected</string>
 
     <!-- Settings screen -->
     <string name="settings_title">Settings</string>
 
-    <!-- Settings — sections -->
+    <!-- Settings - sections -->
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_section_updates">Updates</string>
     <string name="settings_section_about">About</string>
 
-    <!-- Settings — notifications -->
+    <!-- Settings - notifications -->
     <string name="settings_notif_lead_title">Pre-deadline reminder</string>
-    <string name="settings_notif_lead_subtitle">Fire an extra notification before the deadline</string>
+    <string
+        name="settings_notif_lead_subtitle"
+    >Fire an extra notification before the deadline</string>
     <string name="settings_notif_lead_none">None</string>
     <string name="settings_notif_lead_15m">15 min</string>
     <string name="settings_notif_lead_30m">30 min</string>
@@ -134,42 +154,58 @@
     <string name="settings_notif_lead_1d">1 day</string>
 
     <string name="settings_notif_quiet_title">Quiet hours</string>
-    <string name="settings_notif_quiet_subtitle">Defer notifications during this window</string>
+    <string
+        name="settings_notif_quiet_subtitle"
+    >Defer notifications during this window</string>
     <string name="settings_notif_quiet_start">Start</string>
     <string name="settings_notif_quiet_end">End</string>
     <string name="settings_notif_quiet_time_format">%1$02d:%2$02d</string>
 
     <string name="settings_notif_snooze_title">Snooze duration</string>
-    <string name="settings_notif_snooze_subtitle">How long the Snooze action defers a notification</string>
+    <string
+        name="settings_notif_snooze_subtitle"
+    >How long the Snooze action defers a notification</string>
     <string name="settings_notif_snooze_5m">5 min</string>
     <string name="settings_notif_snooze_10m">10 min</string>
     <string name="settings_notif_snooze_15m">15 min</string>
     <string name="settings_notif_snooze_30m">30 min</string>
     <string name="settings_notif_snooze_1h">1 hour</string>
 
-    <!-- Settings — appearance -->
+    <!-- Settings - appearance -->
     <string name="settings_theme_title">Theme</string>
 
-    <!-- Settings — updates -->
+    <!-- Settings - updates -->
     <string name="settings_updates_check">Check for updates</string>
-    <string name="settings_updates_tap_hint">Tap to check for new versions</string>
+    <string
+        name="settings_updates_tap_hint"
+    >Tap to check for new versions</string>
     <string name="settings_updates_checking">Checking for updates…</string>
-    <string name="settings_updates_up_to_date">You\'re on the latest version</string>
-    <string name="settings_updates_available_format">Update available: %s — tap to install</string>
-    <string name="settings_updates_downloading_init">Initializing download…</string>
-    <string name="settings_updates_downloading_format">Downloading… %d%%</string>
+    <string
+        name="settings_updates_up_to_date"
+    >You\'re on the latest version</string>
+    <string
+        name="settings_updates_available_format"
+    >Update available: %s - tap to install</string>
+    <string
+        name="settings_updates_downloading_init"
+    >Initializing download…</string>
+    <string
+        name="settings_updates_downloading_format"
+    >Downloading… %d%%</string>
     <string name="settings_updates_installing">Installing update…</string>
     <string name="settings_updates_error_format">Couldn\'t check: %s</string>
 
-    <!-- Settings — update dialog -->
+    <!-- Settings - update dialog -->
     <string name="settings_update_dialog_title_format">Update to %s</string>
     <string name="settings_update_dialog_size_format">Download size: %s</string>
     <string name="settings_update_no_changelog">No changelog available.</string>
     <string name="settings_update_dialog_confirm">Update</string>
     <string name="settings_update_dialog_cancel">Cancel</string>
 
-    <!-- Settings — about -->
-    <string name="settings_about_description">A local-first task planner for Android.</string>
+    <!-- Settings - about -->
+    <string
+        name="settings_about_description"
+    >A local-first task planner for Android.</string>
     <string name="settings_version_format">Version %s</string>
     <string name="settings_build_format">Build %1$d · %2$s</string>
     <string name="settings_build_debug">debug</string>

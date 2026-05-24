@@ -16,8 +16,8 @@ import javax.inject.Singleton
  * Each scheduled task produces up to two upfront work requests, both sharing a
  * common cancel tag so a single [cancel] call kills the whole chain:
  *
- * - `deadline_<id>_pre`  — fires `deadlineAt − leadTime` (skipped if lead time is 0)
- * - `deadline_<id>_main` — fires at `deadlineAt`
+ * - `deadline_<id>_pre`  - fires `deadlineAt − leadTime` (skipped if lead time is 0)
+ * - `deadline_<id>_main` - fires at `deadlineAt`
  *
  * The optional **follow-up** chain (`deadline_<id>_followup`) is enqueued by the
  * worker itself after the main notification fires and the task is still
@@ -47,7 +47,7 @@ class NotificationScheduler @Inject constructor(
         val prefs = preferencesRepository.observe().first()
         val tag = taskNotificationsTag(taskId)
 
-        // ── Main (at-deadline) notification ────────────────────────────
+        // -- Main (at-deadline) notification ----------------------------
         val mainDelay = deadlineAt - now
         if (mainDelay > 0) {
             workManager.enqueueUniqueWork(
@@ -63,7 +63,7 @@ class NotificationScheduler @Inject constructor(
             )
         }
 
-        // ── Pre-reminder ───────────────────────────────────────────────
+        // -- Pre-reminder -----------------------------------------------
         val leadMin = prefs.preReminderLeadMinutes
         if (leadMin > 0) {
             val preDelay = deadlineAt - leadMin * 60_000L - now

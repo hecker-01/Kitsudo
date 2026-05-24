@@ -22,13 +22,13 @@ class CascadeCompleteUseCase @Inject constructor(
         completeTask(taskId, isCompleted)
 
         if (task.parentId == null) {
-            // ── Top-level task ────────────────────────────────────────
+            // -- Top-level task ----------------------------------------
             // Cascade the same state to every subtask.
             repository.getSubtasks(taskId).first().forEach { subtask ->
                 completeTask(subtask.id, isCompleted)
             }
         } else {
-            // ── Subtask ───────────────────────────────────────────────
+            // -- Subtask -----------------------------------------------
             val siblings = repository.getSubtasks(task.parentId).first()
             if (isCompleted) {
                 // All siblings now done → auto-complete parent.

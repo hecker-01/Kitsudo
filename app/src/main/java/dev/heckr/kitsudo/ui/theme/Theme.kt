@@ -14,10 +14,10 @@ import dev.heckr.kitsudo.domain.model.CatppuccinAccent
 import dev.heckr.kitsudo.domain.model.CatppuccinFlavor
 import dev.heckr.kitsudo.domain.model.ThemePalette
 
-// ── Catppuccin color schemes ───────────────────────────────────────────────
+// -- Catppuccin color schemes -----------------------------------------------
 //
 // Each scheme accepts a [CatppuccinAccent] that drives primary/surfaceTint.
-// Secondary = Blue, Tertiary = Pink — these stay fixed so the chosen accent
+// Secondary = Blue, Tertiary = Pink - these stay fixed so the chosen accent
 // is the dominant UI color without clashing secondary roles.
 
 private fun latteColorScheme(accent: CatppuccinAccent): ColorScheme {
@@ -192,7 +192,7 @@ private fun mochaColorScheme(accent: CatppuccinAccent): ColorScheme {
     )
 }
 
-// ── Public helpers (kept for any call sites that may still use them) ────────
+// -- Public helpers (kept for any call sites that may still use them) --------
 
 fun flavorPreviewColors(flavor: CatppuccinFlavor): List<Color> = when (flavor) {
     CatppuccinFlavor.LATTE ->
@@ -208,7 +208,7 @@ fun flavorPreviewColors(flavor: CatppuccinFlavor): List<Color> = when (flavor) {
         listOf(Mocha.Mauve, Mocha.Blue, Mocha.Pink, Mocha.Green, Mocha.Peach, Mocha.Teal)
 }
 
-// ── KitsudoTheme ───────────────────────────────────────────────────────────
+// -- KitsudoTheme -----------------------------------------------------------
 
 /**
  * Root theme composable.
