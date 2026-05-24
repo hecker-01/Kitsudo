@@ -82,6 +82,17 @@ android {
         compose = true
         buildConfig = true
     }
+
+    packaging {
+        jniLibs {
+            // These prebuilt AndroidX .so files cannot be stripped without the NDK.
+            // They are already in their final form; keep them as-is to suppress the warning.
+            keepDebugSymbols += setOf(
+                "**/libandroidx.graphics.path.so",
+                "**/libdatastore_shared_counter.so",
+            )
+        }
+    }
 }
 
 room {
