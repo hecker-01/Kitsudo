@@ -4,7 +4,6 @@ import android.text.format.Formatter
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -12,8 +11,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,12 +28,17 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -357,15 +359,9 @@ private fun AppearanceCard(
                         }
                     }
 
-                    // ── Accent color picker — all 14 Catppuccin accents ────
+                    // ── Accent color dropdown ──────────────────────────────
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = stringResource(R.string.settings_theme_accent),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    AccentPickerRow(
+                    AccentDropdown(
                         palette = palette,
                         selected = accent,
                         onSelect = onAccentChange,
@@ -376,76 +372,79 @@ private fun AppearanceCard(
     }
 }
 
-// ── Accent picker ──────────────────────────────────────────────────────────
+// ── Accent dropdown ────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AccentPickerRow(
+private fun AccentDropdown(
     palette: ThemePalette,
     selected: CatppuccinAccent,
     onSelect: (CatppuccinAccent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 14 swatches → 7 per row at 38dp each + 4dp gaps fits ~298dp (card content width)
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = modifier,
-    ) {
-        CatppuccinAccent.entries.forEach { accent ->
-            AccentSwatch(
-                color = accentColor(palette, accent),
-                selected = accent == selected,
-                contentDescription = stringResource(accent.labelRes()),
-                onClick = { onSelect(accent) },
-            )
-        }
-    }
-}
-
-/**
- * A circular color swatch for the accent picker.
- *
- * Selected state: a same-color ring around a slightly smaller inner circle,
- * creating a recognisable "halo" gap — works on any background color.
- */
-@Composable
-private fun AccentSwatch(
-    color: Color,
-    selected: Boolean,
-    contentDescription: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+    var expanded by remember { mutableStateOf(false) }
     val view = LocalView.current
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier
-            .size(38.dp)
-            .clickable(
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                indication = null, // custom shape; ripple would clip wrong
-            ) {
-                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                onClick()
-            }
-            .semantics { this.contentDescription = contentDescription },
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier.fillMaxWidth(),
     ) {
-        // Same-color outer ring — only drawn when selected
-        if (selected) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .border(2.dp, color, CircleShape),
-            )
-        }
-        // Inner filled circle — shrinks when selected to create the gap
-        Box(
+        OutlinedTextField(
+            value = stringResource(selected.labelRes()),
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text(stringResource(R.string.settings_theme_accent)) },
+            leadingIcon = {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(accentColor(palette, selected)),
+                )
+            },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
             modifier = Modifier
-                .size(if (selected) 26.dp else 32.dp)
-                .clip(CircleShape)
-                .background(color),
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
         )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            CatppuccinAccent.entries.forEach { accent ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(accent.labelRes())) },
+                    leadingIcon = {
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(accentColor(palette, accent)),
+                        )
+                    },
+                    trailingIcon = if (accent == selected) {
+                        {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    } else {
+                        null
+                    },
+                    onClick = {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        onSelect(accent)
+                        expanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                )
+            }
+        }
     }
 }
 
