@@ -1,5 +1,5 @@
 [versions]
-agp = "9.2.1"
+agp = "9.1.0"
 kotlin = "2.2.10"
 # KSP version must match Kotlin version prefix — update if Kotlin version changes
 ksp = "2.2.10-2.0.2"

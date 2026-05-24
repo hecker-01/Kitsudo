@@ -2,13 +2,14 @@ package dev.heckr.kitsudo.presentation.settings
 
 import android.text.format.Formatter
 import android.view.HapticFeedbackConstants
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -46,9 +47,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -63,6 +67,7 @@ import dev.heckr.kitsudo.R
 import dev.heckr.kitsudo.data.update.AppUpdater
 import dev.heckr.kitsudo.domain.model.CatppuccinFlavor
 import dev.heckr.kitsudo.domain.model.ThemePalette
+import dev.heckr.kitsudo.presentation.settings.components.NotificationCard
 import dev.heckr.kitsudo.presentation.theme.labelRes
 import dev.heckr.kitsudo.ui.theme.KitsudoTheme
 
@@ -97,6 +102,11 @@ fun SettingsScreen(
         uiState = uiState,
         onBack = onBack,
         onPaletteChange = viewModel::setPalette,
+        onSetLeadMinutes = viewModel::setPreReminderLeadMinutes,
+        onSetQuietEnabled = viewModel::setQuietHoursEnabled,
+        onSetQuietStart = viewModel::setQuietStartMinutes,
+        onSetQuietEnd = viewModel::setQuietEndMinutes,
+        onSetSnoozeMinutes = viewModel::setSnoozeMinutes,
         onUpdateCardTapped = { viewModel.onUpdateCardTapped() },
         onUpdateConfirmed = viewModel::confirmUpdate,
         onUpdateDialogDismissed = viewModel::dismissUpdateDialog,
@@ -112,6 +122,11 @@ private fun SettingsContent(
     uiState: SettingsUiState,
     onBack: () -> Unit,
     onPaletteChange: (ThemePalette) -> Unit,
+    onSetLeadMinutes: (Int) -> Unit,
+    onSetQuietEnabled: (Boolean) -> Unit,
+    onSetQuietStart: (Int) -> Unit,
+    onSetQuietEnd: (Int) -> Unit,
+    onSetSnoozeMinutes: (Int) -> Unit,
     onUpdateCardTapped: () -> Unit,
     onUpdateConfirmed: () -> Unit,
     onUpdateDialogDismissed: () -> Unit,
@@ -133,33 +148,73 @@ private fun SettingsContent(
         },
         modifier = modifier,
     ) { innerPadding ->
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
+            val containerHeight: Dp = maxHeight
+            val density = LocalDensity.current
+            // Start at containerHeight so the initial spacer collapses to 0,
+            // avoiding a first-frame flash where the footer appears off-screen.
+            var contentHeight by remember { mutableStateOf(containerHeight) }
+            var footerHeight by remember { mutableStateOf(0.dp) }
+
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    // Reserve space so content is never hidden behind the footer
-                    .padding(bottom = 56.dp),
+                    .padding(horizontal = 16.dp),
             ) {
-                // ── Appearance ────────────────────────────────────────────────
-                SectionLabel(stringResource(R.string.settings_section_appearance))
-                AppearanceCard(palette = uiState.palette, onPaletteChange = onPaletteChange)
+                // ── Scrollable content — measured so we know how much room is left ──
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onSizeChanged { size ->
+                            with(density) { contentHeight = size.height.toDp() }
+                        },
+                ) {
+                    // ── Appearance ────────────────────────────────────────────
+                    SectionLabel(stringResource(R.string.settings_section_appearance))
+                    AppearanceCard(palette = uiState.palette, onPaletteChange = onPaletteChange)
 
-                // ── Updates ───────────────────────────────────────────────────
-                SectionLabel(stringResource(R.string.settings_section_updates))
-                UpdateCard(status = uiState.updateStatus, onTap = onUpdateCardTapped)
+                    // ── Notifications ─────────────────────────────────────────
+                    SectionLabel(stringResource(R.string.settings_section_notifications))
+                    NotificationCard(
+                        prefs = uiState.notifications,
+                        onSetLeadMinutes = onSetLeadMinutes,
+                        onSetQuietEnabled = onSetQuietEnabled,
+                        onSetQuietStart = onSetQuietStart,
+                        onSetQuietEnd = onSetQuietEnd,
+                        onSetSnoozeMinutes = onSetSnoozeMinutes,
+                    )
 
-                // ── About ─────────────────────────────────────────────────────
-                SectionLabel(stringResource(R.string.settings_section_about))
-                AboutCard(uiState = uiState)
+                    // ── Updates ───────────────────────────────────────────────
+                    SectionLabel(stringResource(R.string.settings_section_updates))
+                    UpdateCard(status = uiState.updateStatus, onTap = onUpdateCardTapped)
+
+                    // ── About ─────────────────────────────────────────────────
+                    SectionLabel(stringResource(R.string.settings_section_about))
+                    AboutCard(uiState = uiState)
+                }
+
+                // When content is shorter than the viewport, this spacer fills the
+                // gap so the footer lands exactly at the bottom. When content
+                // overflows (needs scrolling), the spacer collapses to 0 and the
+                // footer just becomes the last scrollable item.
+                Spacer(
+                    modifier = Modifier.height(
+                        (containerHeight - contentHeight - footerHeight).coerceAtLeast(0.dp),
+                    ),
+                )
+
+                // Footer — always inline in the scroll column, never a floating overlay.
+                SettingsFooter(
+                    modifier = Modifier.onSizeChanged { size ->
+                        with(density) { footerHeight = size.height.toDp() }
+                    },
+                )
             }
-
-            SettingsFooter(modifier = Modifier.align(Alignment.BottomCenter))
         }
     }
 
@@ -603,8 +658,6 @@ private fun SettingsFooter(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
-            // Opaque background so scrolling content doesn't bleed through
-            .background(MaterialTheme.colorScheme.background)
             .padding(vertical = 16.dp),
     ) {
         Text(
@@ -646,6 +699,11 @@ private fun SettingsPreviewMocha() {
                 ),
                 onBack = {},
                 onPaletteChange = {},
+                onSetLeadMinutes = {},
+                onSetQuietEnabled = {},
+                onSetQuietStart = {},
+                onSetQuietEnd = {},
+                onSetSnoozeMinutes = {},
                 onUpdateCardTapped = {},
                 onUpdateConfirmed = {},
                 onUpdateDialogDismissed = {},
@@ -670,6 +728,11 @@ private fun SettingsPreviewMaterial3() {
                 ),
                 onBack = {},
                 onPaletteChange = {},
+                onSetLeadMinutes = {},
+                onSetQuietEnabled = {},
+                onSetQuietStart = {},
+                onSetQuietEnd = {},
+                onSetSnoozeMinutes = {},
                 onUpdateCardTapped = {},
                 onUpdateConfirmed = {},
                 onUpdateDialogDismissed = {},
@@ -693,6 +756,11 @@ private fun SettingsPreviewLatte() {
                 ),
                 onBack = {},
                 onPaletteChange = {},
+                onSetLeadMinutes = {},
+                onSetQuietEnabled = {},
+                onSetQuietStart = {},
+                onSetQuietEnd = {},
+                onSetSnoozeMinutes = {},
                 onUpdateCardTapped = {},
                 onUpdateConfirmed = {},
                 onUpdateDialogDismissed = {},

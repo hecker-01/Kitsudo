@@ -9,8 +9,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.heckr.kitsudo.BuildConfig
 import dev.heckr.kitsudo.data.update.AppUpdater
 import dev.heckr.kitsudo.domain.model.ThemePalette
+import dev.heckr.kitsudo.domain.usecase.GetNotificationPreferencesUseCase
 import dev.heckr.kitsudo.domain.usecase.GetThemeFlavorUseCase
 import dev.heckr.kitsudo.domain.usecase.SetThemeFlavorUseCase
+import dev.heckr.kitsudo.domain.usecase.UpdateNotificationPreferenceUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +29,8 @@ class SettingsViewModel @Inject constructor(
     @param:ApplicationContext private val appContext: Context,
     private val getThemeFlavorUseCase: GetThemeFlavorUseCase,
     private val setThemeFlavorUseCase: SetThemeFlavorUseCase,
+    private val getNotificationPreferencesUseCase: GetNotificationPreferencesUseCase,
+    private val updateNotificationPreferenceUseCase: UpdateNotificationPreferenceUseCase,
     private val appUpdater: AppUpdater,
 ) : ViewModel() {
 
@@ -48,6 +52,11 @@ class SettingsViewModel @Inject constructor(
             .catch { /* retain default */ }
             .launchIn(viewModelScope)
 
+        getNotificationPreferencesUseCase()
+            .onEach { prefs -> _uiState.update { it.copy(notifications = prefs) } }
+            .catch { /* retain default */ }
+            .launchIn(viewModelScope)
+
         appUpdater.status
             .onEach { status -> _uiState.update { it.copy(updateStatus = status) } }
             .launchIn(viewModelScope)
@@ -57,6 +66,28 @@ class SettingsViewModel @Inject constructor(
 
     fun setPalette(palette: ThemePalette) {
         viewModelScope.launch { setThemeFlavorUseCase(palette) }
+    }
+
+    // ── Notification preferences ───────────────────────────────────────
+
+    fun setPreReminderLeadMinutes(minutes: Int) {
+        viewModelScope.launch { updateNotificationPreferenceUseCase.setPreReminderLeadMinutes(minutes) }
+    }
+
+    fun setQuietHoursEnabled(enabled: Boolean) {
+        viewModelScope.launch { updateNotificationPreferenceUseCase.setQuietHoursEnabled(enabled) }
+    }
+
+    fun setQuietStartMinutes(minutes: Int) {
+        viewModelScope.launch { updateNotificationPreferenceUseCase.setQuietStartMinutes(minutes) }
+    }
+
+    fun setQuietEndMinutes(minutes: Int) {
+        viewModelScope.launch { updateNotificationPreferenceUseCase.setQuietEndMinutes(minutes) }
+    }
+
+    fun setSnoozeMinutes(minutes: Int) {
+        viewModelScope.launch { updateNotificationPreferenceUseCase.setSnoozeMinutes(minutes) }
     }
 
     fun onUpdateCardTapped(): Boolean {

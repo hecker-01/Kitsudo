@@ -71,6 +71,17 @@
     <string name="notification_channel_description">Reminders when task deadlines arrive</string>
     <string name="notification_deadline_title">Due: %s</string>
     <string name="notification_deadline_body">This task deadline has arrived.</string>
+    <string name="notification_pre_title">Coming up: %s</string>
+    <string name="notification_pre_body">A task deadline is approaching.</string>
+    <string name="notification_overdue_title">Still overdue: %s</string>
+    <string name="notification_overdue_body">This task is past its deadline.</string>
+    <string name="notification_action_complete">Complete</string>
+    <string name="notification_action_snooze">Snooze</string>
+
+    <!-- Subtask-specific notification copy (body always shows parent title) -->
+    <string name="notification_subtask_deadline_title">Subtask due: %s</string>
+    <string name="notification_subtask_overdue_title">Subtask overdue: %s</string>
+    <string name="notification_subtask_body">Part of: %s</string>
 
     <!-- Theme palettes -->
     <string name="theme_palette_material3">Material You</string>
@@ -92,8 +103,32 @@
 
     <!-- Settings — sections -->
     <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_notifications">Notifications</string>
     <string name="settings_section_updates">Updates</string>
     <string name="settings_section_about">About</string>
+
+    <!-- Settings — notifications -->
+    <string name="settings_notif_lead_title">Pre-deadline reminder</string>
+    <string name="settings_notif_lead_subtitle">Fire an extra notification before the deadline</string>
+    <string name="settings_notif_lead_none">None</string>
+    <string name="settings_notif_lead_15m">15 min</string>
+    <string name="settings_notif_lead_30m">30 min</string>
+    <string name="settings_notif_lead_1h">1 hour</string>
+    <string name="settings_notif_lead_1d">1 day</string>
+
+    <string name="settings_notif_quiet_title">Quiet hours</string>
+    <string name="settings_notif_quiet_subtitle">Defer notifications during this window</string>
+    <string name="settings_notif_quiet_start">Start</string>
+    <string name="settings_notif_quiet_end">End</string>
+    <string name="settings_notif_quiet_time_format">%1$02d:%2$02d</string>
+
+    <string name="settings_notif_snooze_title">Snooze duration</string>
+    <string name="settings_notif_snooze_subtitle">How long the Snooze action defers a notification</string>
+    <string name="settings_notif_snooze_5m">5 min</string>
+    <string name="settings_notif_snooze_10m">10 min</string>
+    <string name="settings_notif_snooze_15m">15 min</string>
+    <string name="settings_notif_snooze_30m">30 min</string>
+    <string name="settings_notif_snooze_1h">1 hour</string>
 
     <!-- Settings — appearance -->
     <string name="settings_theme_title">Theme</string>

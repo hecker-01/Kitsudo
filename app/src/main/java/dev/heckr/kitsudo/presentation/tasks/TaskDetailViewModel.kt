@@ -121,7 +121,16 @@ class TaskDetailViewModel @Inject constructor(
             val subtask = taskRepository.getTaskById(subtaskId) ?: return@launch
             updateTaskUseCase(subtask.copy(deadlineAt = deadlineAt))
             if (deadlineAt != null) {
-                notificationScheduler.schedule(subtask.id, subtask.title, deadlineAt)
+                // taskId is always this subtask's parent — pass it so the notification
+                // renders as a subtask notification (lower priority, grouped, no follow-up).
+                val parentTitle = _uiState.value.task?.title
+                notificationScheduler.schedule(
+                    taskId = subtask.id,
+                    taskTitle = subtask.title,
+                    deadlineAt = deadlineAt,
+                    parentId = taskId,
+                    parentTitle = parentTitle,
+                )
             } else {
                 notificationScheduler.cancel(subtask.id)
             }

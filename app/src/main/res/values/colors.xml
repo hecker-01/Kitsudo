@@ -10,4 +10,5 @@
     <!-- Matches Mocha base — shown as window background before Compose draws,
          preventing the light flash on navigation transitions. -->
     <color name="window_background">#1E1E2E</color>
+    <color name="ic_background">#24284b</color>
 </resources>

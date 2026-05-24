@@ -28,6 +28,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Kitsudo"
         >
             <intent-filter>
@@ -48,6 +49,12 @@
                 android:resource="@xml/fileprovider_paths"
             />
         </provider>
+
+        <!-- Notification action buttons (Complete / Snooze). -->
+        <receiver
+            android:name=".data.notification.NotificationActionReceiver"
+            android:exported="false"
+        />
 
         <!-- Disable default WorkManager initialiser; Hilt provides its own. -->
         <provider
