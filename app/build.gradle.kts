@@ -95,6 +95,22 @@ android {
     }
 }
 
+androidComponents {
+    onVariants { variant ->
+        val versionName = android.defaultConfig.versionName ?: "0.0.0"
+        val apkFileName = when (variant.buildType) {
+            "debug" -> "ptdl-dev-${versionName.replace(Regex("-.*"), "").replace(".", "-")}.apk"
+            "release" -> "ptdl-release-${versionName.replace(".", "-")}.apk"
+            else -> "ptdl-${variant.name}.apk"
+        }
+        variant.outputs.forEach { output ->
+            if (output is com.android.build.api.variant.impl.VariantOutputImpl) {
+                output.outputFileName = apkFileName
+            }
+        }
+    }
+}
+
 room {
     schemaDirectory("$projectDir/schemas")
 }
