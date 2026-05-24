@@ -24,6 +24,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -272,7 +273,13 @@ private fun TaskDetailContent(
 
                     // Action buttons always on their own line — no overflow risk
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilledTonalButton(onClick = { showDeadlinePicker = true }) {
+                        FilledTonalButton(
+                            onClick = { showDeadlinePicker = true },
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ),
+                        ) {
                             Icon(Icons.Filled.DateRange, contentDescription = null)
                             Text(
                                 text = stringResource(
@@ -345,6 +352,10 @@ private fun TaskDetailContent(
                                 newSubtaskTitle = ""
                             },
                             enabled = newSubtaskTitle.isNotBlank(),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ),
                         ) {
                             Text(stringResource(R.string.task_subtask_add))
                         }

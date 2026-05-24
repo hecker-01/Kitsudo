@@ -1,6 +1,8 @@
 package dev.heckr.kitsudo.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import dev.heckr.kitsudo.domain.model.CatppuccinAccent
+import dev.heckr.kitsudo.domain.model.ThemePalette
 
 object Latte {
     val Rosewater = Color(0xFFDC8A78)
@@ -116,4 +118,85 @@ object Mocha {
     val Base      = Color(0xFF1E1E2E)
     val Mantle    = Color(0xFF181825)
     val Crust     = Color(0xFF11111B)
+}
+
+// ── Accent color lookup ────────────────────────────────────────────────────
+//
+// Returns the correct ARGB value for a [CatppuccinAccent] in the given
+// [ThemePalette]. Each flavor has its own shade of every accent name.
+
+fun accentColor(palette: ThemePalette, accent: CatppuccinAccent): Color = when (palette) {
+    ThemePalette.MATERIAL3 -> Color.Unspecified // unused — M3 uses dynamic colors
+    ThemePalette.LATTE     -> accentForLatte(accent)
+    ThemePalette.FRAPPE    -> accentForFrappe(accent)
+    ThemePalette.MACCHIATO -> accentForMacchiato(accent)
+    ThemePalette.MOCHA     -> accentForMocha(accent)
+}
+
+private fun accentForLatte(accent: CatppuccinAccent): Color = when (accent) {
+    CatppuccinAccent.ROSEWATER -> Latte.Rosewater
+    CatppuccinAccent.FLAMINGO  -> Latte.Flamingo
+    CatppuccinAccent.PINK      -> Latte.Pink
+    CatppuccinAccent.MAUVE     -> Latte.Mauve
+    CatppuccinAccent.RED       -> Latte.Red
+    CatppuccinAccent.MAROON    -> Latte.Maroon
+    CatppuccinAccent.PEACH     -> Latte.Peach
+    CatppuccinAccent.YELLOW    -> Latte.Yellow
+    CatppuccinAccent.GREEN     -> Latte.Green
+    CatppuccinAccent.TEAL      -> Latte.Teal
+    CatppuccinAccent.SKY       -> Latte.Sky
+    CatppuccinAccent.SAPPHIRE  -> Latte.Sapphire
+    CatppuccinAccent.BLUE      -> Latte.Blue
+    CatppuccinAccent.LAVENDER  -> Latte.Lavender
+}
+
+private fun accentForFrappe(accent: CatppuccinAccent): Color = when (accent) {
+    CatppuccinAccent.ROSEWATER -> Frappe.Rosewater
+    CatppuccinAccent.FLAMINGO  -> Frappe.Flamingo
+    CatppuccinAccent.PINK      -> Frappe.Pink
+    CatppuccinAccent.MAUVE     -> Frappe.Mauve
+    CatppuccinAccent.RED       -> Frappe.Red
+    CatppuccinAccent.MAROON    -> Frappe.Maroon
+    CatppuccinAccent.PEACH     -> Frappe.Peach
+    CatppuccinAccent.YELLOW    -> Frappe.Yellow
+    CatppuccinAccent.GREEN     -> Frappe.Green
+    CatppuccinAccent.TEAL      -> Frappe.Teal
+    CatppuccinAccent.SKY       -> Frappe.Sky
+    CatppuccinAccent.SAPPHIRE  -> Frappe.Sapphire
+    CatppuccinAccent.BLUE      -> Frappe.Blue
+    CatppuccinAccent.LAVENDER  -> Frappe.Lavender
+}
+
+private fun accentForMacchiato(accent: CatppuccinAccent): Color = when (accent) {
+    CatppuccinAccent.ROSEWATER -> Macchiato.Rosewater
+    CatppuccinAccent.FLAMINGO  -> Macchiato.Flamingo
+    CatppuccinAccent.PINK      -> Macchiato.Pink
+    CatppuccinAccent.MAUVE     -> Macchiato.Mauve
+    CatppuccinAccent.RED       -> Macchiato.Red
+    CatppuccinAccent.MAROON    -> Macchiato.Maroon
+    CatppuccinAccent.PEACH     -> Macchiato.Peach
+    CatppuccinAccent.YELLOW    -> Macchiato.Yellow
+    CatppuccinAccent.GREEN     -> Macchiato.Green
+    CatppuccinAccent.TEAL      -> Macchiato.Teal
+    CatppuccinAccent.SKY       -> Macchiato.Sky
+    CatppuccinAccent.SAPPHIRE  -> Macchiato.Sapphire
+    CatppuccinAccent.BLUE      -> Macchiato.Blue
+    CatppuccinAccent.LAVENDER  -> Macchiato.Lavender
+}
+
+private fun accentForMocha(accent: CatppuccinAccent): Color = when (accent) {
+    CatppuccinAccent.ROSEWATER -> Mocha.Rosewater
+    CatppuccinAccent.FLAMINGO  -> Mocha.Flamingo
+    CatppuccinAccent.PINK      -> Mocha.Pink
+    CatppuccinAccent.MAUVE     -> Mocha.Mauve
+    CatppuccinAccent.RED       -> Mocha.Red
+    CatppuccinAccent.MAROON    -> Mocha.Maroon
+    CatppuccinAccent.PEACH     -> Mocha.Peach
+    CatppuccinAccent.YELLOW    -> Mocha.Yellow
+    CatppuccinAccent.GREEN     -> Mocha.Green
+    CatppuccinAccent.TEAL      -> Mocha.Teal
+    CatppuccinAccent.SKY       -> Mocha.Sky
+    CatppuccinAccent.SAPPHIRE  -> Mocha.Sapphire
+    CatppuccinAccent.BLUE      -> Mocha.Blue
+    CatppuccinAccent.LAVENDER  -> Mocha.Lavender
 }

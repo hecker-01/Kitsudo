@@ -4,6 +4,7 @@ import android.text.format.Formatter
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -11,6 +12,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -47,6 +51,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -65,11 +71,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.heckr.kitsudo.R
 import dev.heckr.kitsudo.data.update.AppUpdater
+import dev.heckr.kitsudo.domain.model.CatppuccinAccent
 import dev.heckr.kitsudo.domain.model.CatppuccinFlavor
 import dev.heckr.kitsudo.domain.model.ThemePalette
 import dev.heckr.kitsudo.presentation.settings.components.NotificationCard
 import dev.heckr.kitsudo.presentation.theme.labelRes
 import dev.heckr.kitsudo.ui.theme.KitsudoTheme
+import dev.heckr.kitsudo.ui.theme.accentColor
 
 // The three dark Catppuccin palettes shown in the segmented row
 private val darkPalettes = listOf(
@@ -102,6 +110,7 @@ fun SettingsScreen(
         uiState = uiState,
         onBack = onBack,
         onPaletteChange = viewModel::setPalette,
+        onAccentChange = viewModel::setAccent,
         onSetLeadMinutes = viewModel::setPreReminderLeadMinutes,
         onSetQuietEnabled = viewModel::setQuietHoursEnabled,
         onSetQuietStart = viewModel::setQuietStartMinutes,
@@ -122,6 +131,7 @@ private fun SettingsContent(
     uiState: SettingsUiState,
     onBack: () -> Unit,
     onPaletteChange: (ThemePalette) -> Unit,
+    onAccentChange: (CatppuccinAccent) -> Unit,
     onSetLeadMinutes: (Int) -> Unit,
     onSetQuietEnabled: (Boolean) -> Unit,
     onSetQuietStart: (Int) -> Unit,
@@ -176,7 +186,12 @@ private fun SettingsContent(
                 ) {
                     // ── Appearance ────────────────────────────────────────────
                     SectionLabel(stringResource(R.string.settings_section_appearance))
-                    AppearanceCard(palette = uiState.palette, onPaletteChange = onPaletteChange)
+                    AppearanceCard(
+                        palette = uiState.palette,
+                        accent = uiState.accent,
+                        onPaletteChange = onPaletteChange,
+                        onAccentChange = onAccentChange,
+                    )
 
                     // ── Notifications ─────────────────────────────────────────
                     SectionLabel(stringResource(R.string.settings_section_notifications))
@@ -254,7 +269,9 @@ private fun CardTitle(text: String, modifier: Modifier = Modifier) {
 @Composable
 private fun AppearanceCard(
     palette: ThemePalette,
+    accent: CatppuccinAccent,
     onPaletteChange: (ThemePalette) -> Unit,
+    onAccentChange: (CatppuccinAccent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Remember the last-used Catppuccin palette so we can restore it when
@@ -339,9 +356,96 @@ private fun AppearanceCard(
                             )
                         }
                     }
+
+                    // ── Accent color picker — all 14 Catppuccin accents ────
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.settings_theme_accent),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    AccentPickerRow(
+                        palette = palette,
+                        selected = accent,
+                        onSelect = onAccentChange,
+                    )
                 }
             }
         }
+    }
+}
+
+// ── Accent picker ──────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AccentPickerRow(
+    palette: ThemePalette,
+    selected: CatppuccinAccent,
+    onSelect: (CatppuccinAccent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // 14 swatches → 7 per row at 38dp each + 4dp gaps fits ~298dp (card content width)
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier,
+    ) {
+        CatppuccinAccent.entries.forEach { accent ->
+            AccentSwatch(
+                color = accentColor(palette, accent),
+                selected = accent == selected,
+                contentDescription = stringResource(accent.labelRes()),
+                onClick = { onSelect(accent) },
+            )
+        }
+    }
+}
+
+/**
+ * A circular color swatch for the accent picker.
+ *
+ * Selected state: a same-color ring around a slightly smaller inner circle,
+ * creating a recognisable "halo" gap — works on any background color.
+ */
+@Composable
+private fun AccentSwatch(
+    color: Color,
+    selected: Boolean,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val view = LocalView.current
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(38.dp)
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null, // custom shape; ripple would clip wrong
+            ) {
+                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                onClick()
+            }
+            .semantics { this.contentDescription = contentDescription },
+    ) {
+        // Same-color outer ring — only drawn when selected
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .border(2.dp, color, CircleShape),
+            )
+        }
+        // Inner filled circle — shrinks when selected to create the gap
+        Box(
+            modifier = Modifier
+                .size(if (selected) 26.dp else 32.dp)
+                .clip(CircleShape)
+                .background(color),
+        )
     }
 }
 
@@ -699,6 +803,7 @@ private fun SettingsPreviewMocha() {
                 ),
                 onBack = {},
                 onPaletteChange = {},
+                onAccentChange = {},
                 onSetLeadMinutes = {},
                 onSetQuietEnabled = {},
                 onSetQuietStart = {},
@@ -728,6 +833,7 @@ private fun SettingsPreviewMaterial3() {
                 ),
                 onBack = {},
                 onPaletteChange = {},
+                onAccentChange = {},
                 onSetLeadMinutes = {},
                 onSetQuietEnabled = {},
                 onSetQuietStart = {},
@@ -756,6 +862,7 @@ private fun SettingsPreviewLatte() {
                 ),
                 onBack = {},
                 onPaletteChange = {},
+                onAccentChange = {},
                 onSetLeadMinutes = {},
                 onSetQuietEnabled = {},
                 onSetQuietStart = {},

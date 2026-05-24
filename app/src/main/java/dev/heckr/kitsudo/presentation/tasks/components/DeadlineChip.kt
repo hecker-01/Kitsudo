@@ -24,12 +24,12 @@ fun DeadlineChip(
     val containerColor = if (isOverdue) {
         MaterialTheme.colorScheme.errorContainer
     } else {
-        MaterialTheme.colorScheme.secondaryContainer
+        MaterialTheme.colorScheme.primaryContainer
     }
     val contentColor = if (isOverdue) {
         MaterialTheme.colorScheme.onErrorContainer
     } else {
-        MaterialTheme.colorScheme.onSecondaryContainer
+        MaterialTheme.colorScheme.onPrimaryContainer
     }
     Surface(
         shape = MaterialTheme.shapes.small,

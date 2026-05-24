@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -106,6 +107,10 @@ fun AddTaskSheet(
             ) {
                 FilledTonalButton(
                     onClick = { showDeadlinePicker = true },
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    ),
                 ) {
                     Icon(
                         Icons.Filled.DateRange,
@@ -143,6 +148,10 @@ fun AddTaskSheet(
                         onAdd(title, description, deadlineAt)
                     },
                     enabled = title.isNotBlank(),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    ),
                     modifier = Modifier.padding(start = 8.dp),
                 ) {
                     Text(stringResource(R.string.task_add_confirm))

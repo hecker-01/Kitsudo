@@ -83,6 +83,23 @@
     <string name="notification_subtask_overdue_title">Subtask overdue: %s</string>
     <string name="notification_subtask_body">Part of: %s</string>
 
+    <!-- Accent color names (used as accessibility content descriptions for swatches) -->
+    <string name="accent_rosewater">Rosewater</string>
+    <string name="accent_flamingo">Flamingo</string>
+    <string name="accent_pink">Pink</string>
+    <string name="accent_mauve">Mauve</string>
+    <string name="accent_red">Red</string>
+    <string name="accent_maroon">Maroon</string>
+    <string name="accent_peach">Peach</string>
+    <string name="accent_yellow">Yellow</string>
+    <string name="accent_green">Green</string>
+    <string name="accent_teal">Teal</string>
+    <string name="accent_sky">Sky</string>
+    <string name="accent_sapphire">Sapphire</string>
+    <string name="accent_blue">Blue</string>
+    <string name="accent_lavender">Lavender</string>
+    <string name="settings_theme_accent">Accent</string>
+
     <!-- Theme palettes -->
     <string name="theme_palette_material3">Material You</string>
     <string name="theme_palette_catppuccin">Catppuccin</string>

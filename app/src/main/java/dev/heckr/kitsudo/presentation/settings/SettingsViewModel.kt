@@ -8,9 +8,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.heckr.kitsudo.BuildConfig
 import dev.heckr.kitsudo.data.update.AppUpdater
+import dev.heckr.kitsudo.domain.model.CatppuccinAccent
 import dev.heckr.kitsudo.domain.model.ThemePalette
+import dev.heckr.kitsudo.domain.usecase.GetAccentUseCase
 import dev.heckr.kitsudo.domain.usecase.GetNotificationPreferencesUseCase
 import dev.heckr.kitsudo.domain.usecase.GetThemeFlavorUseCase
+import dev.heckr.kitsudo.domain.usecase.SetAccentUseCase
 import dev.heckr.kitsudo.domain.usecase.SetThemeFlavorUseCase
 import dev.heckr.kitsudo.domain.usecase.UpdateNotificationPreferenceUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +32,8 @@ class SettingsViewModel @Inject constructor(
     @param:ApplicationContext private val appContext: Context,
     private val getThemeFlavorUseCase: GetThemeFlavorUseCase,
     private val setThemeFlavorUseCase: SetThemeFlavorUseCase,
+    private val getAccentUseCase: GetAccentUseCase,
+    private val setAccentUseCase: SetAccentUseCase,
     private val getNotificationPreferencesUseCase: GetNotificationPreferencesUseCase,
     private val updateNotificationPreferenceUseCase: UpdateNotificationPreferenceUseCase,
     private val appUpdater: AppUpdater,
@@ -52,6 +57,11 @@ class SettingsViewModel @Inject constructor(
             .catch { /* retain default */ }
             .launchIn(viewModelScope)
 
+        getAccentUseCase()
+            .onEach { accent -> _uiState.update { it.copy(accent = accent) } }
+            .catch { /* retain default */ }
+            .launchIn(viewModelScope)
+
         getNotificationPreferencesUseCase()
             .onEach { prefs -> _uiState.update { it.copy(notifications = prefs) } }
             .catch { /* retain default */ }
@@ -66,6 +76,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setPalette(palette: ThemePalette) {
         viewModelScope.launch { setThemeFlavorUseCase(palette) }
+    }
+
+    fun setAccent(accent: CatppuccinAccent) {
+        viewModelScope.launch { setAccentUseCase(accent) }
     }
 
     // ── Notification preferences ───────────────────────────────────────

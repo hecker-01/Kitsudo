@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()
             val startTaskId by pendingTaskId.collectAsState()
-            KitsudoTheme(palette = uiState.palette) {
+            KitsudoTheme(palette = uiState.palette, accent = uiState.accent) {
                 KitsudoNavHost(
                     startTaskId = startTaskId,
                     onStartTaskHandled = { pendingTaskId.value = null },
