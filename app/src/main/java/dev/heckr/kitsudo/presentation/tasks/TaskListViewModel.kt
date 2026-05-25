@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.heckr.kitsudo.data.notification.NotificationScheduler
+import dev.heckr.kitsudo.data.update.AppUpdater
 import dev.heckr.kitsudo.domain.usecase.CascadeCompleteUseCase
 import dev.heckr.kitsudo.domain.usecase.CreateTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.DeleteTaskUseCase
@@ -28,12 +29,21 @@ class TaskListViewModel @Inject constructor(
     private val deleteTaskUseCase: DeleteTaskUseCase,
     private val updateTaskUseCase: UpdateTaskUseCase,
     private val notificationScheduler: NotificationScheduler,
+    private val appUpdater: AppUpdater,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TaskListUiState())
     val uiState: StateFlow<TaskListUiState> = _uiState.asStateFlow()
 
     init {
+        appUpdater.status
+            .onEach { status ->
+                _uiState.update { it.copy(updateAvailable = status is AppUpdater.Status.Available) }
+            }
+            .launchIn(viewModelScope)
+
+        appUpdater.syncFromChecker()
+
         getTasksUseCase()
             .onStart { _uiState.update { it.copy(isLoading = true) } }
             .onEach { tasks ->

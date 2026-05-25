@@ -23,4 +23,6 @@ data class TaskListUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val showAddSheet: Boolean = false,
+    /** True when a newer version is available - drives the badge dot on the settings icon. */
+    val updateAvailable: Boolean = false,
 )
