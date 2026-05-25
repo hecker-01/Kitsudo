@@ -6,7 +6,11 @@ import android.view.HapticFeedbackConstants
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -49,9 +53,14 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -252,6 +261,7 @@ private fun TaskList(
                 onToggleComplete = { onToggleComplete(task.id, it) },
                 onToggleSubtaskComplete = onToggleSubtaskComplete,
                 onDelete = { onDeleteTask(task.id) },
+                onDeleteSubtask = onDeleteTask,
                 modifier = Modifier.animateItem(),
             )
         }
@@ -267,6 +277,7 @@ private fun TaskCard(
     onToggleComplete: (Boolean) -> Unit,
     onToggleSubtaskComplete: (String, Boolean) -> Unit,
     onDelete: () -> Unit,
+    onDeleteSubtask: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var expanded by rememberSaveable(task.id) { mutableStateOf(false) }
@@ -275,6 +286,8 @@ private fun TaskCard(
         label = "arrow",
     )
     val view = LocalView.current
+    var exitingSubtaskIds by remember { mutableStateOf(emptySet<String>()) }
+    val scope = rememberCoroutineScope()
 
     Column(modifier = modifier.fillMaxWidth()) {
         // Thin accent bar - error colour for overdue, primary for high-priority-only
@@ -418,21 +431,34 @@ private fun TaskCard(
                     .padding(start = 56.dp, end = 8.dp, bottom = 4.dp, top = 2.dp),
             ) {
                 task.subtasks.forEachIndexed { index, subtask ->
-                    if (index > 0) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                        )
+                    key(subtask.id) {
+                        AnimatedVisibility(
+                            visible = subtask.id !in exitingSubtaskIds,
+                            enter = EnterTransition.None,
+                            exit = shrinkVertically(animationSpec = tween(200)) +
+                                fadeOut(animationSpec = tween(150)),
+                        ) {
+                            Column {
+                                if (index > 0) {
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                    )
+                                }
+                                SubtaskListRow(
+                                    subtask = subtask,
+                                    onToggle = { checked -> onToggleSubtaskComplete(subtask.id, checked) },
+                                    onDelete = {
+                                        exitingSubtaskIds = exitingSubtaskIds + subtask.id
+                                        scope.launch {
+                                            delay(210)
+                                            onDeleteSubtask(subtask.id)
+                                            exitingSubtaskIds = exitingSubtaskIds - subtask.id
+                                        }
+                                    },
+                                )
+                            }
+                        }
                     }
-                    SubtaskListRow(
-                        subtask = subtask,
-                        onToggle = { checked ->
-                            view.performHapticFeedback(
-                                if (checked) HapticFeedbackConstants.TOGGLE_ON
-                                else HapticFeedbackConstants.TOGGLE_OFF,
-                            )
-                            onToggleSubtaskComplete(subtask.id, checked)
-                        },
-                    )
                 }
             }
         }
@@ -537,47 +563,77 @@ private fun SubtaskCountChip(
 private fun SubtaskListRow(
     subtask: TaskUi,
     onToggle: (Boolean) -> Unit,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+    val view = LocalView.current
+
+    SwipeActionBox(
+        onSwipeLeft = onDelete,
+        onSwipeRight = { onToggle(!subtask.isCompleted) },
+        swipeLeftHaptic = HapticFeedbackConstants.REJECT,
+        swipeRightHaptic = if (subtask.isCompleted) {
+            HapticFeedbackConstants.TOGGLE_OFF
+        } else {
+            HapticFeedbackConstants.CONFIRM
+        },
+        backgroundContent = { direction ->
+            TaskSwipeBackground(direction = direction, isCompleted = subtask.isCompleted)
+        },
+        modifier = modifier,
     ) {
-        Checkbox(checked = subtask.isCompleted, onCheckedChange = onToggle)
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 4.dp),
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(
-                text = subtask.title,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                textDecoration = if (subtask.isCompleted) TextDecoration.LineThrough else null,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (subtask.description.isNotBlank()) {
-                Text(
-                    text = subtask.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.let {
-                        if (subtask.isCompleted) it.copy(alpha = 0.5f) else it
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 4.dp),
+            ) {
+                Checkbox(
+                    checked = subtask.isCompleted,
+                    onCheckedChange = { checked ->
+                        view.performHapticFeedback(
+                            if (checked) HapticFeedbackConstants.TOGGLE_ON
+                            else HapticFeedbackConstants.TOGGLE_OFF,
+                        )
+                        onToggle(checked)
                     },
-                    textDecoration = if (subtask.isCompleted) TextDecoration.LineThrough else null,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 1.dp),
                 )
-            }
-            if (subtask.deadlineAt != null) {
-                DeadlineChip(
-                    deadlineAt = subtask.deadlineAt,
-                    isOverdue = subtask.isDeadlineOverdue,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 4.dp),
+                ) {
+                    Text(
+                        text = subtask.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textDecoration = if (subtask.isCompleted) TextDecoration.LineThrough else null,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (subtask.description.isNotBlank()) {
+                        Text(
+                            text = subtask.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.let {
+                                if (subtask.isCompleted) it.copy(alpha = 0.5f) else it
+                            },
+                            textDecoration = if (subtask.isCompleted) TextDecoration.LineThrough else null,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 1.dp),
+                        )
+                    }
+                    if (subtask.deadlineAt != null) {
+                        DeadlineChip(
+                            deadlineAt = subtask.deadlineAt,
+                            isOverdue = subtask.isDeadlineOverdue,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                }
             }
         }
     }
