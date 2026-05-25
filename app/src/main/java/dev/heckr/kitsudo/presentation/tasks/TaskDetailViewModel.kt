@@ -43,6 +43,7 @@ class TaskDetailViewModel @Inject constructor(
     val uiState: StateFlow<TaskDetailUiState> = _uiState.asStateFlow()
 
     private var saveJob: Job? = null
+    private val subtaskSaveJobs = mutableMapOf<String, Job>()
 
     init {
         // Single reactive pipeline: both task and subtasks kept live from Room.
@@ -137,6 +138,26 @@ class TaskDetailViewModel @Inject constructor(
         }
     }
 
+    fun saveSubtaskTitle(subtaskId: String, title: String) {
+        subtaskSaveJobs[subtaskId]?.cancel()
+        subtaskSaveJobs[subtaskId] = viewModelScope.launch {
+            delay(400)
+            val subtask = taskRepository.getTaskById(subtaskId) ?: return@launch
+            val trimmed = title.trim().ifBlank { return@launch }
+            if (subtask.title != trimmed) updateTaskUseCase(subtask.copy(title = trimmed))
+        }
+    }
+
+    fun saveSubtaskDescription(subtaskId: String, description: String) {
+        subtaskSaveJobs[subtaskId]?.cancel()
+        subtaskSaveJobs[subtaskId] = viewModelScope.launch {
+            delay(400)
+            val subtask = taskRepository.getTaskById(subtaskId) ?: return@launch
+            val trimmed = description.trim()
+            if (subtask.description != trimmed) updateTaskUseCase(subtask.copy(description = trimmed))
+        }
+    }
+
     fun addSubtask(title: String) {
         if (title.isBlank()) return
         viewModelScope.launch {
@@ -169,5 +190,11 @@ class TaskDetailViewModel @Inject constructor(
             deleteTaskUseCase(taskId)
             onDeleted()
         }
+    }
+
+    override fun onCleared() {
+        saveJob?.cancel()
+        subtaskSaveJobs.values.forEach { it.cancel() }
+        super.onCleared()
     }
 }

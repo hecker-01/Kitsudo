@@ -559,6 +559,19 @@ private fun SubtaskListRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (subtask.description.isNotBlank()) {
+                Text(
+                    text = subtask.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.let {
+                        if (subtask.isCompleted) it.copy(alpha = 0.5f) else it
+                    },
+                    textDecoration = if (subtask.isCompleted) TextDecoration.LineThrough else null,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 1.dp),
+                )
+            }
             if (subtask.deadlineAt != null) {
                 DeadlineChip(
                     deadlineAt = subtask.deadlineAt,

@@ -1,5 +1,7 @@
 package dev.heckr.kitsudo.presentation.tasks
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +40,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -48,6 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -90,6 +94,8 @@ fun TaskDetailScreen(
         onAddSubtask = viewModel::addSubtask,
         onToggleSubtask = viewModel::toggleSubtaskComplete,
         onSetSubtaskDeadline = viewModel::setSubtaskDeadline,
+        onSaveSubtaskTitle = viewModel::saveSubtaskTitle,
+        onSaveSubtaskDescription = viewModel::saveSubtaskDescription,
         onDeleteSubtask = viewModel::deleteSubtask,
         onDeleteTask = { viewModel.deleteTask(onBack) },
         modifier = modifier,
@@ -110,6 +116,8 @@ private fun TaskDetailContent(
     onAddSubtask: (String) -> Unit,
     onToggleSubtask: (String, Boolean) -> Unit,
     onSetSubtaskDeadline: (subtaskId: String, deadlineAt: Long?) -> Unit,
+    onSaveSubtaskTitle: (subtaskId: String, title: String) -> Unit,
+    onSaveSubtaskDescription: (subtaskId: String, description: String) -> Unit,
     onDeleteSubtask: (String) -> Unit,
     onDeleteTask: () -> Unit,
     modifier: Modifier = Modifier,
@@ -316,13 +324,17 @@ private fun TaskDetailContent(
                     if (subtasks.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         subtasks.forEachIndexed { index, subtask ->
-                            if (index > 0) HorizontalDivider()
-                            SubtaskRow(
-                                subtask = subtask,
-                                onToggle = { onToggleSubtask(subtask.id, it) },
-                                onSetDeadline = { onSetSubtaskDeadline(subtask.id, it) },
-                                onDelete = { onDeleteSubtask(subtask.id) },
-                            )
+                            key(subtask.id) {
+                                if (index > 0) HorizontalDivider()
+                                SubtaskRow(
+                                    subtask = subtask,
+                                    onToggle = { onToggleSubtask(subtask.id, it) },
+                                    onSetDeadline = { onSetSubtaskDeadline(subtask.id, it) },
+                                    onSaveTitle = { onSaveSubtaskTitle(subtask.id, it) },
+                                    onSaveDescription = { onSaveSubtaskDescription(subtask.id, it) },
+                                    onDelete = { onDeleteSubtask(subtask.id) },
+                                )
+                            }
                         }
                     }
 
@@ -417,13 +429,19 @@ private fun SubtaskRow(
     subtask: TaskUi,
     onToggle: (Boolean) -> Unit,
     onSetDeadline: (Long?) -> Unit,
+    onSaveTitle: (String) -> Unit,
+    onSaveDescription: (String) -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showPicker by rememberSaveable { mutableStateOf(false) }
+    var expanded by rememberSaveable(subtask.id) { mutableStateOf(false) }
+    var titleField by rememberSaveable(subtask.id) { mutableStateOf(subtask.title) }
+    var descField by rememberSaveable(subtask.id) { mutableStateOf(subtask.description) }
     val view = LocalView.current
 
     Column(modifier = modifier.fillMaxWidth()) {
+        // -- Collapsed header row ------------------------------------------
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 2.dp),
@@ -438,17 +456,35 @@ private fun SubtaskRow(
                     onToggle(checked)
                 },
             )
+            // Tappable content area - tap to expand/collapse edit fields
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = 4.dp),
+                    .padding(start = 4.dp)
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        expanded = !expanded
+                    },
             ) {
                 Text(
-                    text = subtask.title,
+                    text = titleField.ifBlank { subtask.title },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     textDecoration = if (subtask.isCompleted) TextDecoration.LineThrough else null,
+                    maxLines = if (expanded) Int.MAX_VALUE else 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
+                // Description preview (collapsed only, if present)
+                if (!expanded && descField.isNotBlank()) {
+                    Text(
+                        text = descField,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 1.dp),
+                    )
+                }
                 if (subtask.deadlineAt != null) {
                     DeadlineChip(
                         deadlineAt = subtask.deadlineAt,
@@ -474,6 +510,43 @@ private fun SubtaskRow(
                     Icons.Filled.Delete,
                     contentDescription = stringResource(R.string.task_delete_label),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        // -- Inline edit fields (expanded) ---------------------------------
+        AnimatedVisibility(visible = expanded) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(start = 52.dp, end = 4.dp, bottom = 10.dp),
+            ) {
+                OutlinedTextField(
+                    value = titleField,
+                    onValueChange = { v ->
+                        titleField = v
+                        onSaveTitle(v)
+                    },
+                    label = { Text(stringResource(R.string.task_field_title)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        imeAction = ImeAction.Next,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = descField,
+                    onValueChange = { v ->
+                        descField = v
+                        onSaveDescription(v)
+                    },
+                    label = { Text(stringResource(R.string.task_field_description)) },
+                    minLines = 2,
+                    maxLines = 4,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
