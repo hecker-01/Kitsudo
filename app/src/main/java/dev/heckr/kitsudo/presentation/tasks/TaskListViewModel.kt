@@ -84,8 +84,8 @@ class TaskListViewModel @Inject constructor(
                 deadlineAt = deadlineAt,
             )
             result.onSuccess { task ->
-                if (task.deadlineAt != null) {
-                    notificationScheduler.schedule(task.id, task.title, task.deadlineAt)
+                task.deadlineAt?.let { deadline ->
+                    notificationScheduler.schedule(task.id, task.title, deadline)
                 }
             }
         }

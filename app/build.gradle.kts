@@ -6,7 +6,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.room)
 }
 
 val gitCommitCount = providers.exec {
@@ -99,8 +98,8 @@ androidComponents {
     onVariants { variant ->
         val versionName = android.defaultConfig.versionName ?: "0.0.0"
         val apkFileName = when (variant.buildType) {
-            "debug" -> "ptdl-dev-${versionName.replace(Regex("-.*"), "").replace(".", "-")}.apk"
-            "release" -> "ptdl-release-${versionName.replace(".", "-")}.apk"
+            "debug" -> "kitsudo-dev-${versionName.replace(Regex("-.*"), "").replace(".", "-")}.apk"
+            "release" -> "kitsudo-release-${versionName.replace(".", "-")}.apk"
             else -> "ptdl-${variant.name}.apk"
         }
         variant.outputs.forEach { output ->
@@ -111,11 +110,9 @@ androidComponents {
     }
 }
 
-room {
-    schemaDirectory("$projectDir/schemas")
-}
-
 dependencies {
+    // Shared domain + data layer
+    implementation(project(":core"))
     // Compose BOM
     implementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -144,10 +141,9 @@ dependencies {
     ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
 
-    // Room
+    // Room runtime (needed by DatabaseModule which calls Room.databaseBuilder)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
@@ -159,6 +155,10 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.hilt.work)
     ksp(libs.hilt.compiler)
+
+    // Wearable Data Layer (phone side)
+    implementation(libs.play.services.wearable)
+    implementation(libs.kotlinx.coroutines.play.services)
 
     // DataStore
     implementation(libs.androidx.datastore.preferences)

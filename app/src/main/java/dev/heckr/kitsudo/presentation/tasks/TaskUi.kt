@@ -45,7 +45,7 @@ fun Task.toUi(now: Long = System.currentTimeMillis()): TaskUi = TaskUi(
     description = description,
     isCompleted = isCompleted,
     deadlineAt = deadlineAt,
-    isDeadlineOverdue = deadlineAt != null && deadlineAt < now && !isCompleted,
+    isDeadlineOverdue = deadlineAt?.let { it < now && !isCompleted } ?: false,
     syncStatus = syncStatus,
     priority = priority,
 )
@@ -57,7 +57,7 @@ fun TaskWithSubtasks.toWithSubtasksUi(now: Long = System.currentTimeMillis()): T
         description = task.description,
         isCompleted = task.isCompleted,
         deadlineAt = task.deadlineAt,
-        isDeadlineOverdue = task.deadlineAt != null && task.deadlineAt < now && !task.isCompleted,
+        isDeadlineOverdue = task.deadlineAt?.let { it < now && !task.isCompleted } ?: false,
         syncStatus = task.syncStatus,
         subtasks = subtasks.map { it.toUi(now) },
         priority = task.priority,

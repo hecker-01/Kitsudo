@@ -35,6 +35,9 @@ interface TaskDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTask(task: TaskEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(tasks: List<TaskEntity>)
+
     @Update
     suspend fun updateTask(task: TaskEntity)
 
@@ -43,4 +46,7 @@ interface TaskDao {
 
     @Query("DELETE FROM tasks WHERE parentId = :parentId")
     suspend fun deleteSubtasksByParent(parentId: String)
+
+    @Query("DELETE FROM tasks")
+    suspend fun deleteAll()
 }
