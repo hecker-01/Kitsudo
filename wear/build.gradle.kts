@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -6,6 +8,24 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
 }
+
+val gitCommitCount = providers.exec {
+    commandLine("git", "rev-list", "--count", "HEAD")
+}.standardOutput.asText.get().trim().toInt()
+
+// -- Signing ----------------------------------------------------------------
+// Credentials are read from local.properties (gitignored) so they never
+// appear in source control. The release build will simply be unsigned if
+// the file or any key is missing (safe for CI forks / open-source clones).
+val localProps = Properties().also { props ->
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { props.load(it) }
+}
+val ksFile  = localProps.getProperty("KEYSTORE_FILE")
+val ksPass  = localProps.getProperty("KEYSTORE_PASSWORD")
+val ksAlias = localProps.getProperty("KEY_ALIAS")
+val ksKey   = localProps.getProperty("KEY_PASSWORD")
+val versionName = localProps.getProperty("VERSION_NAME")
 
 android {
     namespace = "dev.heckr.kitsudo.wear"
@@ -19,10 +39,21 @@ android {
         applicationId = "dev.heckr.kitsudo"
         minSdk = 33
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = gitCommitCount
+        versionName = versionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    if (ksFile != null && ksPass != null && ksAlias != null && ksKey != null) {
+        signingConfigs {
+            create("release") {
+                storeFile     = file(ksFile)
+                storePassword = ksPass
+                keyAlias      = ksAlias
+                keyPassword   = ksKey
+            }
+        }
     }
 
     buildTypes {
@@ -36,6 +67,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            val releaseSigningConfig = signingConfigs.findByName("release")
+            if (releaseSigningConfig != null) {
+                signingConfig = releaseSigningConfig
+            }
         }
     }
 
@@ -49,6 +84,22 @@ android {
     }
 }
 
+androidComponents {
+    onVariants { variant ->
+        val versionName = android.defaultConfig.versionName ?: "0.0.0"
+        val apkFileName = when (variant.buildType) {
+            "debug" -> "kitsudo-wear-dev-${versionName.replace(Regex("-.*"), "").replace(".", "-")}.apk"
+            "release" -> "kitsudo-wear-release-${versionName.replace(".", "-")}.apk"
+            else -> "ptdl-${variant.name}.apk"
+        }
+        variant.outputs.forEach { output ->
+            if (output is com.android.build.api.variant.impl.VariantOutputImpl) {
+                output.outputFileName = apkFileName
+            }
+        }
+    }
+}
+
 room {
     schemaDirectory("$projectDir/schemas")
 }
@@ -56,6 +107,9 @@ room {
 dependencies {
     // Shared domain + data layer
     implementation(project(":core"))
+
+    // DataStore (needed directly for WearPreferencesModule Hilt binding)
+    implementation(libs.androidx.datastore.preferences)
 
     // Compose BOM
     implementation(platform(libs.androidx.compose.bom))

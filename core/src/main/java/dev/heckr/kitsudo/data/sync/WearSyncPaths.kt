@@ -16,4 +16,23 @@ object WearSyncPaths {
 
     /** DataMap key for the publish timestamp (prevents stale-data acceptance). */
     const val KEY_TIMESTAMP = "timestamp"
+
+    /** DataMap key for the active [dev.heckr.kitsudo.domain.model.ThemePalette] name. */
+    const val KEY_THEME = "theme_palette"
+
+    /** DataMap key for the active [dev.heckr.kitsudo.domain.model.CatppuccinAccent] name. */
+    const val KEY_ACCENT = "accent_color"
+
+    // Material You dynamic color keys — only present in the DataMap when theme = MATERIAL3.
+    // Values are packed ARGB ints from the phone's dynamicDarkColorScheme.
+    const val KEY_M3_PRIMARY        = "m3_primary"
+    const val KEY_M3_ON_PRIMARY     = "m3_on_primary"
+    const val KEY_M3_TERTIARY       = "m3_tertiary"
+    const val KEY_M3_ERROR          = "m3_error"
+    const val KEY_M3_ON_SURFACE     = "m3_on_surface"
+    const val KEY_M3_ON_SURF_VAR    = "m3_on_surface_variant"
+    const val KEY_M3_OUTLINE        = "m3_outline"
+    const val KEY_M3_SURF_LOW       = "m3_surf_low"
+    const val KEY_M3_SURF_MID       = "m3_surf_mid"
+    const val KEY_M3_SURF_HIGH      = "m3_surf_high"
 }

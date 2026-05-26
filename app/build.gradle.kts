@@ -20,10 +20,11 @@ val localProps = Properties().also { props ->
     val f = rootProject.file("local.properties")
     if (f.exists()) f.inputStream().use { props.load(it) }
 }
-val ksFile  = localProps.getProperty("KEYSTORE_FILE")
-val ksPass  = localProps.getProperty("KEYSTORE_PASSWORD")
-val ksAlias = localProps.getProperty("KEY_ALIAS")
-val ksKey   = localProps.getProperty("KEY_PASSWORD")
+val ksFile      = localProps.getProperty("KEYSTORE_FILE")
+val ksPass      = localProps.getProperty("KEYSTORE_PASSWORD")
+val ksAlias     = localProps.getProperty("KEY_ALIAS")
+val ksKey       = localProps.getProperty("KEY_PASSWORD")
+val versionName = localProps.getProperty("VERSION_NAME")
 
 android {
     namespace = "dev.heckr.kitsudo"
@@ -38,7 +39,7 @@ android {
         minSdk = 33
         targetSdk = 36
         versionCode = gitCommitCount
-        versionName = "1.1.0"
+        versionName = versionName
 
         testInstrumentationRunner = "com.google.dagger.hilt.android.testing.HiltTestRunner"
     }

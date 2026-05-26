@@ -30,7 +30,7 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import dev.heckr.kitsudo.domain.model.Task
 import dev.heckr.kitsudo.domain.model.TaskWithSubtasks
-import dev.heckr.kitsudo.ui.theme.Mocha
+import dev.heckr.kitsudo.wear.ui.theme.LocalWearPaletteColors
 
 @Composable
 fun WearTaskDetailScreen(
@@ -47,8 +47,9 @@ fun WearTaskDetailScreen(
             }
         }
         is WearTaskDetailUiState.NotFound -> {
+            val p = LocalWearPaletteColors.current
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Task not found", style = MaterialTheme.typography.bodyMedium, color = Mocha.Text)
+                Text("Task not found", style = MaterialTheme.typography.bodyMedium, color = p.text)
             }
         }
         is WearTaskDetailUiState.Success -> {
@@ -65,6 +66,7 @@ private fun TaskDetail(
     data: TaskWithSubtasks,
     onToggleTask: (String, Boolean) -> Unit,
 ) {
+    val p = LocalWearPaletteColors.current
     val haptic = LocalHapticFeedback.current
     val task = data.task
     val completed = task.isCompleted
@@ -74,13 +76,13 @@ private fun TaskDetail(
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        // ── Title row ──────────────────────────────────────────────────────────
+        // ── Title ──────────────────────────────────────────────────────────────
         item {
             ListHeader {
                 Text(
                     text = task.title,
                     style = MaterialTheme.typography.titleSmall,
-                    color = if (completed) Mocha.Subtext0 else Mocha.Text,
+                    color = if (completed) p.subtext0 else p.text,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     textDecoration = if (completed) TextDecoration.LineThrough else null,
@@ -94,7 +96,7 @@ private fun TaskDetail(
                 Text(
                     text = task.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Mocha.Subtext1,
+                    color = p.subtext1,
                     modifier = Modifier.padding(horizontal = 4.dp),
                     maxLines = 4,
                     overflow = TextOverflow.Ellipsis,
@@ -111,8 +113,8 @@ private fun TaskDetail(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (completed) Mocha.Surface2 else Mocha.Green,
-                    contentColor = if (completed) Mocha.Subtext0 else Mocha.Base,
+                    containerColor = if (completed) p.surface2 else p.accent,
+                    contentColor   = if (completed) p.subtext0 else p.base,
                 ),
             ) {
                 Text(
@@ -122,9 +124,9 @@ private fun TaskDetail(
             }
         }
 
-        // ── Subtasks ────────────────────────────────────────────────────────────
+        // ── Subtasks ───────────────────────────────────────────────────────────
         if (data.subtasks.isNotEmpty()) {
-            item { ListHeader { Text("Subtasks", color = Mocha.Subtext0) } }
+            item { ListHeader { Text("Subtasks", color = p.subtext0) } }
 
             items(data.subtasks, key = { it.id }) { subtask ->
                 SubtaskRow(
@@ -141,13 +143,14 @@ private fun SubtaskRow(
     subtask: Task,
     onToggle: () -> Unit,
 ) {
+    val p = LocalWearPaletteColors.current
     val completed = subtask.isCompleted
     Button(
         onClick = onToggle,
         modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (completed) Mocha.Surface0 else Mocha.Surface1,
-            contentColor = if (completed) Mocha.Subtext1 else Mocha.Text,
+            containerColor = if (completed) p.surface0 else p.surface1,
+            contentColor   = if (completed) p.subtext1 else p.text,
         ),
     ) {
         Row(
@@ -156,7 +159,6 @@ private fun SubtaskRow(
                 .padding(horizontal = 2.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Reuse the same CheckDot from the list screen for visual consistency
             CheckDot(checked = completed, onClick = onToggle)
 
             Spacer(modifier = Modifier.width(10.dp))
@@ -164,7 +166,7 @@ private fun SubtaskRow(
             Text(
                 text = subtask.title,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (completed) Mocha.Subtext1 else Mocha.Text,
+                color = if (completed) p.subtext1 else p.text,
                 textDecoration = if (completed) TextDecoration.LineThrough else null,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,

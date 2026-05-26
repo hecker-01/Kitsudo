@@ -24,7 +24,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material3.Icon
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
@@ -32,11 +31,12 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import dev.heckr.kitsudo.domain.model.TaskWithSubtasks
-import dev.heckr.kitsudo.ui.theme.Mocha
+import dev.heckr.kitsudo.wear.ui.theme.LocalWearPaletteColors
 
 @Composable
 fun WearTaskListScreen(
@@ -56,6 +56,7 @@ fun WearTaskListScreen(
         }
 
         is WearTaskListUiState.NoData -> {
+            val p = LocalWearPaletteColors.current
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
@@ -68,12 +69,12 @@ fun WearTaskListScreen(
                     Text(
                         text = "No tasks yet",
                         style = MaterialTheme.typography.titleSmall,
-                        color = Mocha.Text,
+                        color = p.text,
                     )
                     Text(
                         text = "Add tasks in Kitsudo on your phone",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Mocha.Subtext0,
+                        color = p.subtext0,
                     )
                 }
             }
@@ -118,6 +119,7 @@ private fun TaskRow(
     onClick: () -> Unit,
     onToggle: () -> Unit,
 ) {
+    val p = LocalWearPaletteColors.current
     val haptic = LocalHapticFeedback.current
     val task = tws.task
     val completed = task.isCompleted
@@ -128,8 +130,8 @@ private fun TaskRow(
         },
         modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (completed) Mocha.Surface0 else Mocha.Surface1,
-            contentColor = if (completed) Mocha.Subtext1 else Mocha.Text,
+            containerColor = if (completed) p.surface0 else p.surface1,
+            contentColor   = if (completed) p.subtext1 else p.text,
         ),
     ) {
         Row(
@@ -149,13 +151,13 @@ private fun TaskRow(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     textDecoration = if (completed) TextDecoration.LineThrough else null,
-                    color = if (completed) Mocha.Subtext1 else Mocha.Text,
+                    color = if (completed) p.subtext1 else p.text,
                 )
                 if (tws.totalSubtaskCount > 0) {
                     Text(
                         text = "${tws.completedSubtaskCount}/${tws.totalSubtaskCount} subtasks",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Mocha.Subtext0,
+                        color = p.subtext0,
                     )
                 }
             }
@@ -166,8 +168,8 @@ private fun TaskRow(
 /**
  * Small circular check indicator.
  *
- * - **Unchecked**: outlined ring in Overlay2 colour — clearly interactive, not filled.
- * - **Checked**: solid green fill with a ✓ glyph.
+ * - **Unchecked**: outlined ring — clearly interactive, not filled.
+ * - **Checked**: solid accent-green fill with a Material check icon.
  */
 @Composable
 fun CheckDot(
@@ -175,6 +177,7 @@ fun CheckDot(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val p = LocalWearPaletteColors.current
     val haptic = LocalHapticFeedback.current
     val hapticClick = {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -187,8 +190,8 @@ fun CheckDot(
             modifier = modifier.size(28.dp),
             shape = CircleShape,
             colors = ButtonDefaults.buttonColors(
-                containerColor = Mocha.Green,
-                contentColor = Mocha.Base,
+                containerColor = p.accent,
+                contentColor   = p.base,
             ),
             contentPadding = PaddingValues(0.dp),
         ) {
@@ -208,11 +211,11 @@ fun CheckDot(
             onClick = hapticClick,
             modifier = modifier
                 .size(28.dp)
-                .border(width = 2.dp, color = Mocha.Overlay2, shape = CircleShape),
+                .border(width = 2.dp, color = p.overlay2, shape = CircleShape),
             shape = CircleShape,
             colors = ButtonDefaults.buttonColors(
-                containerColor = Mocha.Surface1,
-                contentColor = Mocha.Overlay2,
+                containerColor = p.surface1,
+                contentColor   = p.overlay2,
             ),
             contentPadding = PaddingValues(0.dp),
         ) {}
