@@ -25,7 +25,7 @@ val ksFile  = localProps.getProperty("KEYSTORE_FILE")
 val ksPass  = localProps.getProperty("KEYSTORE_PASSWORD")
 val ksAlias = localProps.getProperty("KEY_ALIAS")
 val ksKey   = localProps.getProperty("KEY_PASSWORD")
-val versionName = localProps.getProperty("VERSION_NAME")
+val versionNameStr = localProps.getProperty("VERSION_NAME") ?: "0.0.0"
 
 android {
     namespace = "dev.heckr.kitsudo.wear"
@@ -40,7 +40,7 @@ android {
         minSdk = 33
         targetSdk = 36
         versionCode = gitCommitCount
-        versionName = versionName
+        versionName = versionNameStr
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
