@@ -31,6 +31,7 @@ data class TaskWithSubtasksUi(
     val subtasks: List<TaskUi>,
     val priority: Priority,
     val createdAt: Long,
+    val sortOrder: Int,
 ) {
     val subtaskCount: Int get() = subtasks.size
     val subtaskCompletedCount: Int get() = subtasks.count { it.isCompleted }
@@ -62,4 +63,5 @@ fun TaskWithSubtasks.toWithSubtasksUi(now: Long = System.currentTimeMillis()): T
         subtasks = subtasks.map { it.toUi(now) },
         priority = task.priority,
         createdAt = task.createdAt,
+        sortOrder = task.sortOrder,
     )

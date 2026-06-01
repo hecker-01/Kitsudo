@@ -11,6 +11,16 @@
         name="task_list_error"
     >Something went wrong. Please try again.</string>
 
+    <!-- Task sort mode -->
+    <string name="task_sort_label">Change sort order</string>
+    <string name="task_sort_smart">Smart</string>
+    <string name="task_sort_custom">Custom</string>
+    <string name="task_sort_alphabetical">A-Z</string>
+    <string name="task_sort_deadline">Deadline</string>
+    <string name="task_sort_newest">Newest</string>
+    <string name="task_sort_oldest">Oldest</string>
+    <string name="task_sort_priority">Priority</string>
+
     <!-- Task filters -->
     <string name="task_filter_all">All</string>
     <string name="task_filter_active">Active</string>

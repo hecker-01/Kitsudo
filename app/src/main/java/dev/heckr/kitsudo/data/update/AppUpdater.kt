@@ -34,7 +34,7 @@ class AppUpdater @Inject constructor() {
         data object Idle : Status()
         data object Checking : Status()
         data class Available(val version: String) : Status()
-        /** progress: 0–100 for determinate, -1 for indeterminate */
+        /** progress: 0-100 for determinate, -1 for indeterminate */
         data class Downloading(val progress: Int = -1) : Status()
         data object Installing : Status()
         data object UpToDate : Status()

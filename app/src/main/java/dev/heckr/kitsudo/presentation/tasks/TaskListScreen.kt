@@ -27,8 +27,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
@@ -37,6 +39,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -45,12 +49,14 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -64,6 +70,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
@@ -74,11 +81,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.heckr.kitsudo.R
 import dev.heckr.kitsudo.domain.model.Priority
 import dev.heckr.kitsudo.domain.model.SyncStatus
+import dev.heckr.kitsudo.domain.model.TaskSortMode
 import dev.heckr.kitsudo.presentation.tasks.components.AddTaskSheet
 import dev.heckr.kitsudo.presentation.tasks.components.DeadlineChip
 import dev.heckr.kitsudo.presentation.tasks.components.SwipeActionBox
 import dev.heckr.kitsudo.presentation.tasks.components.SwipeDirection
 import dev.heckr.kitsudo.ui.theme.KitsudoTheme
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
 fun TaskListScreen(
@@ -111,6 +121,8 @@ fun TaskListScreen(
         onToggleSubtaskComplete = viewModel::toggleSubtaskComplete,
         onDeleteTask = viewModel::deleteTask,
         onSetFilter = viewModel::setFilter,
+        onSetSortMode = viewModel::setSortMode,
+        onReorder = viewModel::reorderTasks,
         modifier = modifier,
     )
 }
@@ -129,6 +141,8 @@ private fun TaskListContent(
     onToggleSubtaskComplete: (subtaskId: String, Boolean) -> Unit,
     onDeleteTask: (taskId: String) -> Unit,
     onSetFilter: (TaskListFilter) -> Unit,
+    onSetSortMode: (TaskSortMode) -> Unit,
+    onReorder: (orderedIds: List<String>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -171,12 +185,19 @@ private fun TaskListContent(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            // -- Filter chip row --------------------------------------------
-            FilterChipRow(
-                currentFilter = uiState.filter,
-                overdueCount = uiState.overdueCount,
-                onFilterSelected = onSetFilter,
-            )
+            // -- Filter chip row + sort toggle ------------------------------
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FilterChipRow(
+                    currentFilter = uiState.filter,
+                    overdueCount = uiState.overdueCount,
+                    onFilterSelected = onSetFilter,
+                    modifier = Modifier.weight(1f),
+                )
+                SortModeAction(
+                    sortMode = uiState.sortMode,
+                    onSetSortMode = onSetSortMode,
+                )
+            }
 
             // -- Task list / states -----------------------------------------
             when {
@@ -188,6 +209,10 @@ private fun TaskListContent(
                 )
                 else -> TaskList(
                     tasks = uiState.tasks,
+                    // Drag-reorder only makes sense over the full, unfiltered list.
+                    reorderEnabled = uiState.sortMode == TaskSortMode.CUSTOM &&
+                        uiState.filter == TaskListFilter.ALL,
+                    onReorder = onReorder,
                     onOpenTask = onOpenTask,
                     onOpenSubtask = onOpenSubtask,
                     onToggleComplete = onToggleComplete,
@@ -243,11 +268,58 @@ private fun FilterChipRow(
     }
 }
 
+// -- Sort-mode top-bar action -----------------------------------------------
+
+@Composable
+private fun SortModeAction(
+    sortMode: TaskSortMode,
+    onSetSortMode: (TaskSortMode) -> Unit,
+) {
+    val view = LocalView.current
+    var menuOpen by remember { mutableStateOf(false) }
+    Box(modifier = Modifier.padding(end = 2.dp)) {
+        IconButton(onClick = { menuOpen = true }) {
+            Icon(
+                Icons.AutoMirrored.Filled.List,
+                contentDescription = stringResource(R.string.task_sort_label),
+                // Tint primary in custom mode to signal manual ordering is active.
+                tint = if (sortMode == TaskSortMode.CUSTOM) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+          CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
+            TaskSortMode.entries.forEach { mode ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(mode.labelRes())) },
+                    onClick = {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        onSetSortMode(mode)
+                        menuOpen = false
+                    },
+                    trailingIcon = if (mode == sortMode) {
+                        { Icon(Icons.Filled.Check, contentDescription = null) }
+                    } else {
+                        null
+                    },
+                )
+            }
+          }
+        }
+    }
+}
+
 // -- Task list --------------------------------------------------------------
 
 @Composable
 private fun TaskList(
     tasks: List<TaskWithSubtasksUi>,
+    reorderEnabled: Boolean,
+    onReorder: (orderedIds: List<String>) -> Unit,
     onOpenTask: (String) -> Unit,
     onOpenSubtask: (parentId: String, subtaskId: String) -> Unit,
     onToggleComplete: (String, Boolean) -> Unit,
@@ -255,21 +327,45 @@ private fun TaskList(
     onDeleteTask: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val view = LocalView.current
+    val lazyListState = rememberLazyListState()
+    // Local mirror so drag moves are reflected instantly; re-synced from the
+    // source of truth whenever the upstream list changes (e.g. after persist).
+    var orderedTasks by remember(tasks) { mutableStateOf(tasks) }
+    val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        orderedTasks = orderedTasks.toMutableList().apply { add(to.index, removeAt(from.index)) }
+        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+    }
+
     LazyColumn(
+        state = lazyListState,
         contentPadding = PaddingValues(vertical = 8.dp),
         modifier = modifier.fillMaxSize(),
     ) {
-        items(tasks, key = { it.id }) { task ->
-            TaskCard(
-                task = task,
-                onTap = { onOpenTask(task.id) },
-                onOpenSubtask = { subtaskId -> onOpenSubtask(task.id, subtaskId) },
-                onToggleComplete = { onToggleComplete(task.id, it) },
-                onToggleSubtaskComplete = onToggleSubtaskComplete,
-                onDelete = { onDeleteTask(task.id) },
-                onDeleteSubtask = onDeleteTask,
-                modifier = Modifier.animateItem(),
-            )
+        items(orderedTasks, key = { it.id }) { task ->
+            ReorderableItem(reorderableState, key = task.id) { isDragging ->
+                val dragModifier = if (reorderEnabled) {
+                    Modifier.longPressDraggableHandle(
+                        onDragStarted = {
+                            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        },
+                        onDragStopped = { onReorder(orderedTasks.map { it.id }) },
+                    )
+                } else {
+                    Modifier
+                }
+                TaskCard(
+                    task = task,
+                    dragModifier = dragModifier,
+                    isDragging = isDragging,
+                    onTap = { onOpenTask(task.id) },
+                    onOpenSubtask = { subtaskId -> onOpenSubtask(task.id, subtaskId) },
+                    onToggleComplete = { onToggleComplete(task.id, it) },
+                    onToggleSubtaskComplete = onToggleSubtaskComplete,
+                    onDelete = { onDeleteTask(task.id) },
+                    onDeleteSubtask = onDeleteTask,
+                )
+            }
         }
     }
 }
@@ -286,6 +382,8 @@ private fun TaskCard(
     onDelete: () -> Unit,
     onDeleteSubtask: (String) -> Unit,
     modifier: Modifier = Modifier,
+    dragModifier: Modifier = Modifier,
+    isDragging: Boolean = false,
 ) {
     var expanded by rememberSaveable(task.id) { mutableStateOf(false) }
     val arrowAngle by animateFloatAsState(
@@ -296,7 +394,13 @@ private fun TaskCard(
     var exitingSubtaskIds by remember { mutableStateOf(emptySet<String>()) }
     val scope = rememberCoroutineScope()
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(if (isDragging) 6.dp else 0.dp)
+            .background(MaterialTheme.colorScheme.surface)
+            .then(dragModifier),
+    ) {
         // Thin accent bar - error colour for overdue, primary for high-priority-only
         when {
             task.isDeadlineOverdue -> Box(
@@ -698,7 +802,7 @@ private fun TaskListPreview() {
                         id = "1", title = "Buy groceries", description = "Milk, eggs",
                         isCompleted = false, deadlineAt = null, isDeadlineOverdue = false,
                         syncStatus = SyncStatus.SYNCED, priority = Priority.HIGH,
-                        createdAt = System.currentTimeMillis(),
+                        createdAt = System.currentTimeMillis(), sortOrder = 0,
                         subtasks = listOf(
                             TaskUi(
                                 id = "1a", title = "Milk", description = "",
@@ -716,6 +820,8 @@ private fun TaskListPreview() {
             onToggleSubtaskComplete = { _, _ -> },
             onDeleteTask = {},
             onSetFilter = {},
+            onSetSortMode = {},
+            onReorder = {},
         )
     }
 }

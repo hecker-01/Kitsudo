@@ -5,15 +5,19 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.heckr.kitsudo.data.notification.NotificationScheduler
 import dev.heckr.kitsudo.data.update.AppUpdater
+import dev.heckr.kitsudo.domain.model.TaskSortMode
+import dev.heckr.kitsudo.domain.repository.TaskListPreferencesRepository
 import dev.heckr.kitsudo.domain.usecase.CascadeCompleteUseCase
 import dev.heckr.kitsudo.domain.usecase.CreateTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.DeleteTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.GetTasksUseCase
+import dev.heckr.kitsudo.domain.usecase.ReorderTasksUseCase
 import dev.heckr.kitsudo.domain.usecase.UpdateTaskUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
@@ -28,6 +32,8 @@ class TaskListViewModel @Inject constructor(
     private val cascadeCompleteUseCase: CascadeCompleteUseCase,
     private val deleteTaskUseCase: DeleteTaskUseCase,
     private val updateTaskUseCase: UpdateTaskUseCase,
+    private val reorderTasksUseCase: ReorderTasksUseCase,
+    private val taskListPreferencesRepository: TaskListPreferencesRepository,
     private val notificationScheduler: NotificationScheduler,
     private val appUpdater: AppUpdater,
 ) : ViewModel() {
@@ -44,16 +50,21 @@ class TaskListViewModel @Inject constructor(
 
         appUpdater.syncFromChecker()
 
-        getTasksUseCase()
+        combine(
+            getTasksUseCase(),
+            taskListPreferencesRepository.observeSortMode(),
+        ) { tasks, sortMode -> tasks to sortMode }
             .onStart { _uiState.update { it.copy(isLoading = true) } }
-            .onEach { tasks ->
+            .onEach { (tasks, sortMode) ->
                 val now = System.currentTimeMillis()
-                val sorted = tasks.map { t -> t.toWithSubtasksUi(now) }.smartSorted()
-                val overdueCount = sorted.count { it.isDeadlineOverdue }
+                val mapped = tasks.map { t -> t.toWithSubtasksUi(now) }
+                val ordered = mapped.sortedByMode(sortMode)
+                val overdueCount = ordered.count { it.isDeadlineOverdue }
                 _uiState.update { state ->
                     state.copy(
-                        allTasks = sorted,
-                        tasks = sorted.applyFilter(state.filter),
+                        allTasks = ordered,
+                        tasks = ordered.applyFilter(state.filter),
+                        sortMode = sortMode,
                         overdueCount = overdueCount,
                         isLoading = false,
                         error = null,
@@ -73,15 +84,30 @@ class TaskListViewModel @Inject constructor(
         }
     }
 
+    fun setSortMode(mode: TaskSortMode) {
+        viewModelScope.launch { taskListPreferencesRepository.setSortMode(mode) }
+    }
+
+    /**
+     * Persists a manual reorder. [orderedIds] is the full visible order after the
+     * drag; sortOrder is rewritten to match. Only used in [TaskSortMode.CUSTOM].
+     */
+    fun reorderTasks(orderedIds: List<String>) {
+        viewModelScope.launch { reorderTasksUseCase(orderedIds) }
+    }
+
     fun showAddSheet() = _uiState.update { it.copy(showAddSheet = true) }
     fun hideAddSheet() = _uiState.update { it.copy(showAddSheet = false) }
 
     fun addTask(title: String, description: String, deadlineAt: Long?) {
         viewModelScope.launch {
+            // In custom order, new tasks go to the bottom; in smart order, sortOrder is unused.
+            val bottomOrder = (_uiState.value.allTasks.maxOfOrNull { it.sortOrder } ?: -1) + 1
             val result = createTaskUseCase(
                 title = title,
                 description = description,
                 deadlineAt = deadlineAt,
+                sortOrder = bottomOrder,
             )
             result.onSuccess { task ->
                 task.deadlineAt?.let { deadline ->
@@ -143,6 +169,51 @@ private fun List<TaskWithSubtasksUi>.smartSorted(): List<TaskWithSubtasksUi> {
     val completed = filter { it.isCompleted }
         .sortedByDescending { it.createdAt }
     return overdue + upcoming + noDeadline + completed
+}
+
+/** Dispatches to the ordering for [mode]. */
+private fun List<TaskWithSubtasksUi>.sortedByMode(mode: TaskSortMode): List<TaskWithSubtasksUi> =
+    when (mode) {
+        TaskSortMode.SMART -> smartSorted()
+        TaskSortMode.CUSTOM -> customSorted()
+        TaskSortMode.ALPHABETICAL ->
+            fieldSorted(compareBy { it.title.lowercase() })
+        TaskSortMode.DEADLINE ->
+            fieldSorted(
+                compareBy<TaskWithSubtasksUi> { it.deadlineAt == null }
+                    .thenBy { it.deadlineAt }
+                    .thenByDescending { it.createdAt },
+            )
+        TaskSortMode.NEWEST ->
+            fieldSorted(compareByDescending { it.createdAt })
+        TaskSortMode.OLDEST ->
+            fieldSorted(compareBy { it.createdAt })
+        TaskSortMode.PRIORITY ->
+            fieldSorted(
+                compareByDescending<TaskWithSubtasksUi> { it.isHighPriority }
+                    .thenByDescending { it.createdAt },
+            )
+    }
+
+/**
+ * Manual order: purely by each task's sortOrder, creation time breaking ties.
+ * Completion state and priority deliberately do not influence the order here.
+ */
+private fun List<TaskWithSubtasksUi>.customSorted(): List<TaskWithSubtasksUi> =
+    sortedWith(
+        compareBy<TaskWithSubtasksUi> { it.sortOrder }
+            .thenByDescending { it.createdAt },
+    )
+
+/**
+ * Field sorts (alphabetical, deadline, etc.) always sink completed tasks to the
+ * bottom, then apply [comparator] within the incomplete and completed groups.
+ */
+private fun List<TaskWithSubtasksUi>.fieldSorted(
+    comparator: Comparator<TaskWithSubtasksUi>,
+): List<TaskWithSubtasksUi> {
+    val (completed, incomplete) = partition { it.isCompleted }
+    return incomplete.sortedWith(comparator) + completed.sortedWith(comparator)
 }
 
 private fun List<TaskWithSubtasksUi>.applyFilter(filter: TaskListFilter): List<TaskWithSubtasksUi> =
