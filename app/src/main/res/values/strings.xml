@@ -143,10 +143,10 @@
     <string name="settings_section_about">About</string>
 
     <!-- Settings - notifications -->
-    <string name="settings_notif_lead_title">Pre-deadline reminder</string>
+    <string name="settings_notif_lead_title">Pre-deadline reminders</string>
     <string
         name="settings_notif_lead_subtitle"
-    >Fire an extra notification before the deadline</string>
+    >Pick one or more times to be reminded before the deadline</string>
     <string name="settings_notif_lead_none">None</string>
     <string name="settings_notif_lead_15m">15 min</string>
     <string name="settings_notif_lead_30m">30 min</string>

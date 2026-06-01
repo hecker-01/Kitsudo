@@ -50,6 +50,11 @@ fun KitsudoNavHost(
                 onOpenTask = { taskId ->
                     navController.navigate(Screen.TaskDetail.routeFor(taskId))
                 },
+                onOpenSubtask = { parentId, subtaskId ->
+                    navController.navigate(
+                        Screen.TaskDetail.routeFor(parentId, expandSubtaskId = subtaskId),
+                    )
+                },
             )
         }
         composable(Screen.Settings.route) {
@@ -57,7 +62,14 @@ fun KitsudoNavHost(
         }
         composable(
             route = Screen.TaskDetail.route,
-            arguments = listOf(navArgument("taskId") { type = NavType.StringType }),
+            arguments = listOf(
+                navArgument("taskId") { type = NavType.StringType },
+                navArgument("expandSubtaskId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
         ) {
             TaskDetailScreen(onBack = { navController.popBackStack() })
         }

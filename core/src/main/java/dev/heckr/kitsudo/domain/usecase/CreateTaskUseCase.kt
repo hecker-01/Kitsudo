@@ -8,6 +8,7 @@ import javax.inject.Inject
 
 class CreateTaskUseCase @Inject constructor(
     private val repository: TaskRepository,
+    private val recomputeParentCompletion: RecomputeParentCompletionUseCase,
 ) {
     suspend operator fun invoke(
         title: String,
@@ -27,6 +28,11 @@ class CreateTaskUseCase @Inject constructor(
             deadlineAt = deadlineAt,
             sortOrder = sortOrder,
         )
-        return repository.createTask(task).map { task }
+        return repository.createTask(task)
+            .onSuccess {
+                // A new (incomplete) subtask must un-complete a parent that was done.
+                if (parentId != null) recomputeParentCompletion(parentId)
+            }
+            .map { task }
     }
 }

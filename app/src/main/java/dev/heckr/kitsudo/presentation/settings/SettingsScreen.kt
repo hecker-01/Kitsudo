@@ -134,7 +134,7 @@ private fun SettingsContent(
     onBack: () -> Unit,
     onPaletteChange: (ThemePalette) -> Unit,
     onAccentChange: (CatppuccinAccent) -> Unit,
-    onSetLeadMinutes: (Int) -> Unit,
+    onSetLeadMinutes: (Set<Int>) -> Unit,
     onSetQuietEnabled: (Boolean) -> Unit,
     onSetQuietStart: (Int) -> Unit,
     onSetQuietEnd: (Int) -> Unit,

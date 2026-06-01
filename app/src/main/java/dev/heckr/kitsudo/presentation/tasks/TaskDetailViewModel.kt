@@ -39,6 +39,9 @@ class TaskDetailViewModel @Inject constructor(
 
     val taskId: String = checkNotNull(savedStateHandle["taskId"])
 
+    /** Subtask id to expand on first open (deep-link from the task list), if any. */
+    val expandSubtaskId: String? = savedStateHandle["expandSubtaskId"]
+
     private val _uiState = MutableStateFlow(TaskDetailUiState())
     val uiState: StateFlow<TaskDetailUiState> = _uiState.asStateFlow()
 

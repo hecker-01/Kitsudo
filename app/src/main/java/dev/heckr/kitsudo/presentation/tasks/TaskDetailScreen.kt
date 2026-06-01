@@ -85,6 +85,7 @@ fun TaskDetailScreen(
     TaskDetailContent(
         task = task,
         subtasks = uiState.subtasks,
+        expandSubtaskId = viewModel.expandSubtaskId,
         onBack = onBack,
         onTitleChange = viewModel::saveTitle,
         onDescriptionChange = viewModel::saveDescription,
@@ -107,6 +108,7 @@ fun TaskDetailScreen(
 private fun TaskDetailContent(
     task: TaskUi,
     subtasks: List<TaskUi>,
+    expandSubtaskId: String?,
     onBack: () -> Unit,
     onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
@@ -328,6 +330,7 @@ private fun TaskDetailContent(
                                 if (index > 0) HorizontalDivider()
                                 SubtaskRow(
                                     subtask = subtask,
+                                    initiallyExpanded = subtask.id == expandSubtaskId,
                                     onToggle = { onToggleSubtask(subtask.id, it) },
                                     onSetDeadline = { onSetSubtaskDeadline(subtask.id, it) },
                                     onSaveTitle = { onSaveSubtaskTitle(subtask.id, it) },
@@ -433,9 +436,10 @@ private fun SubtaskRow(
     onSaveDescription: (String) -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
+    initiallyExpanded: Boolean = false,
 ) {
     var showPicker by rememberSaveable { mutableStateOf(false) }
-    var expanded by rememberSaveable(subtask.id) { mutableStateOf(false) }
+    var expanded by rememberSaveable(subtask.id) { mutableStateOf(initiallyExpanded) }
     var titleField by rememberSaveable(subtask.id) { mutableStateOf(subtask.title) }
     var descField by rememberSaveable(subtask.id) { mutableStateOf(subtask.description) }
     val view = LocalView.current

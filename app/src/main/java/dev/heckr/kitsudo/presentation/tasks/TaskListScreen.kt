@@ -84,6 +84,7 @@ import dev.heckr.kitsudo.ui.theme.KitsudoTheme
 fun TaskListScreen(
     onOpenSettings: () -> Unit,
     onOpenTask: (String) -> Unit,
+    onOpenSubtask: (parentId: String, subtaskId: String) -> Unit,
     viewModel: TaskListViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
 ) {
@@ -102,6 +103,7 @@ fun TaskListScreen(
         uiState = uiState,
         onOpenSettings = onOpenSettings,
         onOpenTask = onOpenTask,
+        onOpenSubtask = onOpenSubtask,
         onShowAddSheet = viewModel::showAddSheet,
         onHideAddSheet = viewModel::hideAddSheet,
         onAddTask = viewModel::addTask,
@@ -119,6 +121,7 @@ private fun TaskListContent(
     uiState: TaskListUiState,
     onOpenSettings: () -> Unit,
     onOpenTask: (String) -> Unit,
+    onOpenSubtask: (parentId: String, subtaskId: String) -> Unit,
     onShowAddSheet: () -> Unit,
     onHideAddSheet: () -> Unit,
     onAddTask: (title: String, description: String, deadlineAt: Long?) -> Unit,
@@ -186,6 +189,7 @@ private fun TaskListContent(
                 else -> TaskList(
                     tasks = uiState.tasks,
                     onOpenTask = onOpenTask,
+                    onOpenSubtask = onOpenSubtask,
                     onToggleComplete = onToggleComplete,
                     onToggleSubtaskComplete = onToggleSubtaskComplete,
                     onDeleteTask = onDeleteTask,
@@ -245,6 +249,7 @@ private fun FilterChipRow(
 private fun TaskList(
     tasks: List<TaskWithSubtasksUi>,
     onOpenTask: (String) -> Unit,
+    onOpenSubtask: (parentId: String, subtaskId: String) -> Unit,
     onToggleComplete: (String, Boolean) -> Unit,
     onToggleSubtaskComplete: (String, Boolean) -> Unit,
     onDeleteTask: (String) -> Unit,
@@ -258,6 +263,7 @@ private fun TaskList(
             TaskCard(
                 task = task,
                 onTap = { onOpenTask(task.id) },
+                onOpenSubtask = { subtaskId -> onOpenSubtask(task.id, subtaskId) },
                 onToggleComplete = { onToggleComplete(task.id, it) },
                 onToggleSubtaskComplete = onToggleSubtaskComplete,
                 onDelete = { onDeleteTask(task.id) },
@@ -274,6 +280,7 @@ private fun TaskList(
 private fun TaskCard(
     task: TaskWithSubtasksUi,
     onTap: () -> Unit,
+    onOpenSubtask: (String) -> Unit,
     onToggleComplete: (Boolean) -> Unit,
     onToggleSubtaskComplete: (String, Boolean) -> Unit,
     onDelete: () -> Unit,
@@ -446,6 +453,7 @@ private fun TaskCard(
                                 }
                                 SubtaskListRow(
                                     subtask = subtask,
+                                    onTap = { onOpenSubtask(subtask.id) },
                                     onToggle = { checked -> onToggleSubtaskComplete(subtask.id, checked) },
                                     onDelete = {
                                         exitingSubtaskIds = exitingSubtaskIds + subtask.id
@@ -562,6 +570,7 @@ private fun SubtaskCountChip(
 @Composable
 private fun SubtaskListRow(
     subtask: TaskUi,
+    onTap: () -> Unit,
     onToggle: (Boolean) -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -583,7 +592,9 @@ private fun SubtaskListRow(
         modifier = modifier,
     ) {
         Surface(
+            onClick = onTap,
             color = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Row(
@@ -698,7 +709,8 @@ private fun TaskListPreview() {
                     ),
                 ),
             ),
-            onOpenSettings = {}, onOpenTask = {}, onShowAddSheet = {},
+            onOpenSettings = {}, onOpenTask = {}, onOpenSubtask = { _, _ -> },
+            onShowAddSheet = {},
             onHideAddSheet = {}, onAddTask = { _, _, _ -> },
             onToggleComplete = { _, _ -> },
             onToggleSubtaskComplete = { _, _ -> },

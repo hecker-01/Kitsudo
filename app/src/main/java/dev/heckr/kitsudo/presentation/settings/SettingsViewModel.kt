@@ -84,7 +84,7 @@ class SettingsViewModel @Inject constructor(
 
     // -- Notification preferences ---------------------------------------
 
-    fun setPreReminderLeadMinutes(minutes: Int) {
+    fun setPreReminderLeadMinutes(minutes: Set<Int>) {
         viewModelScope.launch { updateNotificationPreferenceUseCase.setPreReminderLeadMinutes(minutes) }
     }
 

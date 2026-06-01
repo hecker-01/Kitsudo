@@ -10,7 +10,7 @@ import javax.inject.Inject
 class UpdateNotificationPreferenceUseCase @Inject constructor(
     private val repository: NotificationPreferencesRepository,
 ) {
-    suspend fun setPreReminderLeadMinutes(minutes: Int) =
+    suspend fun setPreReminderLeadMinutes(minutes: Set<Int>) =
         repository.setPreReminderLeadMinutes(minutes)
 
     suspend fun setQuietHoursEnabled(enabled: Boolean) =

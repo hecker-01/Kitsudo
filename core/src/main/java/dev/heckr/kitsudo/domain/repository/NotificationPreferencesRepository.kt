@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 interface NotificationPreferencesRepository {
     fun observe(): Flow<NotificationPreferences>
 
-    suspend fun setPreReminderLeadMinutes(minutes: Int)
+    suspend fun setPreReminderLeadMinutes(minutes: Set<Int>)
     suspend fun setQuietHoursEnabled(enabled: Boolean)
     suspend fun setQuietStartMinutes(minutes: Int)
     suspend fun setQuietEndMinutes(minutes: Int)

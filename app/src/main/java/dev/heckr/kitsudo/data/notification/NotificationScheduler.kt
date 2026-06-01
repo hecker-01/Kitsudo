@@ -16,8 +16,8 @@ import javax.inject.Singleton
  * Each scheduled task produces up to two upfront work requests, both sharing a
  * common cancel tag so a single [cancel] call kills the whole chain:
  *
- * - `deadline_<id>_pre`  - fires `deadlineAt − leadTime` (skipped if lead time is 0)
- * - `deadline_<id>_main` - fires at `deadlineAt`
+ * - `deadline_<id>_pre_<lead>`  - one per configured lead time (none if the set is empty)
+ * - `deadline_<id>_main`        - fires at `deadlineAt`
  *
  * The optional **follow-up** chain (`deadline_<id>_followup`) is enqueued by the
  * worker itself after the main notification fires and the task is still
@@ -63,18 +63,17 @@ class NotificationScheduler @Inject constructor(
             )
         }
 
-        // -- Pre-reminder -----------------------------------------------
-        val leadMin = prefs.preReminderLeadMinutes
-        if (leadMin > 0) {
+        // -- Pre-reminders (one per configured lead time) ---------------
+        prefs.preReminderLeadMinutes.filter { it > 0 }.forEach { leadMin ->
             val preDelay = deadlineAt - leadMin * 60_000L - now
             if (preDelay > 0) {
                 workManager.enqueueUniqueWork(
-                    preWorkName(taskId),
+                    preWorkName(taskId, leadMin),
                     ExistingWorkPolicy.REPLACE,
                     OneTimeWorkRequestBuilder<DeadlineNotificationWorker>()
                         .setInitialDelay(preDelay, TimeUnit.MILLISECONDS)
                         .setInputData(
-                            buildInputData(taskId, taskTitle, NotificationKind.PRE, deadlineAt, parentId = parentId, parentTitle = parentTitle),
+                            buildInputData(taskId, taskTitle, NotificationKind.PRE, deadlineAt, preLeadMinutes = leadMin, parentId = parentId, parentTitle = parentTitle),
                         )
                         .addTag(tag)
                         .build(),
@@ -123,6 +122,7 @@ class NotificationScheduler @Inject constructor(
         kind: NotificationKind,
         deadlineAt: Long,
         followupAttempt: Int = 0,
+        preLeadMinutes: Int = 0,
         parentId: String? = null,
         parentTitle: String? = null,
     ) = workDataOf(
@@ -131,13 +131,15 @@ class NotificationScheduler @Inject constructor(
         DeadlineNotificationWorker.KEY_KIND to kind.name,
         DeadlineNotificationWorker.KEY_DEADLINE_AT to deadlineAt,
         DeadlineNotificationWorker.KEY_FOLLOWUP_ATTEMPT to followupAttempt,
+        DeadlineNotificationWorker.KEY_PRE_LEAD_MINUTES to preLeadMinutes,
         DeadlineNotificationWorker.KEY_PARENT_TASK_ID to parentId,
         DeadlineNotificationWorker.KEY_PARENT_TASK_TITLE to parentTitle,
     )
 
     companion object {
         fun taskNotificationsTag(taskId: String) = "task_notifications_$taskId"
-        fun preWorkName(taskId: String) = "deadline_${taskId}_pre"
+        /** Per-lead-time unique name so multiple pre-reminders don't overwrite each other. */
+        fun preWorkName(taskId: String, leadMinutes: Int) = "deadline_${taskId}_pre_$leadMinutes"
         fun mainWorkName(taskId: String) = "deadline_${taskId}_main"
         fun followupWorkName(taskId: String) = "deadline_${taskId}_followup"
     }

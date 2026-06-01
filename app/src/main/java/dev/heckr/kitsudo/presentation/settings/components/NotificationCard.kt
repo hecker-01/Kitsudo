@@ -52,7 +52,7 @@ import dev.heckr.kitsudo.domain.model.NotificationPreferences
 @Composable
 fun NotificationCard(
     prefs: NotificationPreferences,
-    onSetLeadMinutes: (Int) -> Unit,
+    onSetLeadMinutes: (Set<Int>) -> Unit,
     onSetQuietEnabled: (Boolean) -> Unit,
     onSetQuietStart: (Int) -> Unit,
     onSetQuietEnd: (Int) -> Unit,
@@ -66,14 +66,14 @@ fun NotificationCard(
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // -- Pre-reminder lead time ---------------------------------
+            // -- Pre-reminder lead time (multi-select) ------------------
             SubSectionLabel(stringResource(R.string.settings_notif_lead_title))
             Subtitle(stringResource(R.string.settings_notif_lead_subtitle))
             Spacer(Modifier.height(8.dp))
-            ChipRow(
+            LeadChipRow(
                 options = LEAD_OPTIONS,
                 selected = prefs.preReminderLeadMinutes,
-                onSelect = onSetLeadMinutes,
+                onChange = onSetLeadMinutes,
             )
 
             Spacer(Modifier.height(20.dp))
@@ -161,6 +161,41 @@ private fun ChipRow(
                 label = stringResource(opt.labelRes),
                 selected = opt.value == selected,
                 onClick = { onSelect(opt.value) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+/**
+ * Multi-select variant for pre-reminder lead times. Several lead times can be
+ * active at once - each fires its own reminder before the deadline. The
+ * `value == 0` ("None") chip clears the whole selection and shows as selected
+ * when no lead time is active.
+ */
+@Composable
+private fun LeadChipRow(
+    options: List<ChipOption>,
+    selected: Set<Int>,
+    onChange: (Set<Int>) -> Unit,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        options.forEach { opt ->
+            val isSelected = if (opt.value == 0) selected.isEmpty() else opt.value in selected
+            ChipOptionCard(
+                label = stringResource(opt.labelRes),
+                selected = isSelected,
+                onClick = {
+                    val newSet = when {
+                        opt.value == 0 -> emptySet()
+                        opt.value in selected -> selected - opt.value
+                        else -> selected + opt.value
+                    }
+                    onChange(newSet)
+                },
                 modifier = Modifier.weight(1f),
             )
         }

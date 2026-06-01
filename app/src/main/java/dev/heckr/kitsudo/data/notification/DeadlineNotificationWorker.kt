@@ -42,6 +42,8 @@ class DeadlineNotificationWorker @AssistedInject constructor(
         const val KEY_KIND = "kind"
         const val KEY_DEADLINE_AT = "deadline_at"
         const val KEY_FOLLOWUP_ATTEMPT = "followup_attempt"
+        /** Lead time of a PRE reminder, used to keep its unique work name distinct. */
+        const val KEY_PRE_LEAD_MINUTES = "pre_lead_minutes"
         /** Null in the data bundle for top-level tasks; set for subtasks. */
         const val KEY_PARENT_TASK_ID = "parent_task_id"
         const val KEY_PARENT_TASK_TITLE = "parent_task_title"
@@ -59,6 +61,7 @@ class DeadlineNotificationWorker @AssistedInject constructor(
         val kind = NotificationKind.fromName(inputData.getString(KEY_KIND))
         val deadlineAt = inputData.getLong(KEY_DEADLINE_AT, 0L)
         val followupAttempt = inputData.getInt(KEY_FOLLOWUP_ATTEMPT, 0)
+        val preLeadMinutes = inputData.getInt(KEY_PRE_LEAD_MINUTES, 0)
         val parentId = inputData.getString(KEY_PARENT_TASK_ID)
         val parentTitle = inputData.getString(KEY_PARENT_TASK_TITLE)
 
@@ -75,7 +78,7 @@ class DeadlineNotificationWorker @AssistedInject constructor(
             val deferDelay = deferUntil - now
             if (deferDelay > 0) {
                 workManager.enqueueUniqueWork(
-                    uniqueNameForKind(taskId, kind),
+                    uniqueNameForKind(taskId, kind, preLeadMinutes),
                     ExistingWorkPolicy.REPLACE,
                     OneTimeWorkRequestBuilder<DeadlineNotificationWorker>()
                         .setInitialDelay(deferDelay, TimeUnit.MILLISECONDS)
@@ -86,6 +89,7 @@ class DeadlineNotificationWorker @AssistedInject constructor(
                                 KEY_KIND to kind.name,
                                 KEY_DEADLINE_AT to deadlineAt,
                                 KEY_FOLLOWUP_ATTEMPT to followupAttempt,
+                                KEY_PRE_LEAD_MINUTES to preLeadMinutes,
                                 KEY_PARENT_TASK_ID to parentId,
                                 KEY_PARENT_TASK_TITLE to parentTitle,
                             ),
@@ -128,8 +132,12 @@ class DeadlineNotificationWorker @AssistedInject constructor(
         return Result.success()
     }
 
-    private fun uniqueNameForKind(taskId: String, kind: NotificationKind): String = when (kind) {
-        NotificationKind.PRE -> NotificationScheduler.preWorkName(taskId)
+    private fun uniqueNameForKind(
+        taskId: String,
+        kind: NotificationKind,
+        preLeadMinutes: Int,
+    ): String = when (kind) {
+        NotificationKind.PRE -> NotificationScheduler.preWorkName(taskId, preLeadMinutes)
         NotificationKind.MAIN -> NotificationScheduler.mainWorkName(taskId)
         NotificationKind.FOLLOWUP -> NotificationScheduler.followupWorkName(taskId)
     }
