@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -730,11 +731,19 @@ private fun UpdateConfirmDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Text(
-                    text = if (!body.isNullOrBlank()) body
-                    else stringResource(R.string.settings_update_no_changelog),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                if (!body.isNullOrBlank()) {
+                    MarkdownText(
+                        markdown = body,
+                        modifier = Modifier
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState()),
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.settings_update_no_changelog),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
             }
         },
         confirmButton = {

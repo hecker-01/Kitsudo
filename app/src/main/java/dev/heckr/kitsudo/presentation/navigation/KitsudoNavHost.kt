@@ -24,14 +24,16 @@ fun KitsudoNavHost(
     navController: NavHostController = rememberNavController(),
     /** Task id to open immediately after the NavHost is composed. */
     startTaskId: String? = null,
+    /** When [startTaskId] is a parent, the subtask id to pre-expand in its detail. */
+    startExpandSubtaskId: String? = null,
     /** Called once [startTaskId] has been navigated to, so the caller can reset state. */
     onStartTaskHandled: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // Deep-link from a notification tap: navigate as soon as a non-null id arrives.
-    LaunchedEffect(startTaskId) {
+    LaunchedEffect(startTaskId, startExpandSubtaskId) {
         val id = startTaskId ?: return@LaunchedEffect
-        navController.navigate(Screen.TaskDetail.routeFor(id))
+        navController.navigate(Screen.TaskDetail.routeFor(id, expandSubtaskId = startExpandSubtaskId))
         onStartTaskHandled()
     }
 

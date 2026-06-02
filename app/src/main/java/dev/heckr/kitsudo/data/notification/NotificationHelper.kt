@@ -30,6 +30,13 @@ class NotificationHelper @Inject constructor(
         const val CHANNEL_ID = "task_deadlines"
         const val EXTRA_OPEN_TASK_ID = "open_task_id"
 
+        /**
+         * Set alongside [EXTRA_OPEN_TASK_ID] when the notification is for a subtask.
+         * [EXTRA_OPEN_TASK_ID] then carries the *parent* id, and this carries the
+         * subtask id to pre-expand - mirroring a subtask tap on the list screen.
+         */
+        const val EXTRA_EXPAND_SUBTASK_ID = "expand_subtask_id"
+
         /** Pre + main share an id so main visually replaces the pre-reminder. */
         private fun notificationId(taskId: String, kind: NotificationKind): Int = when (kind) {
             NotificationKind.PRE, NotificationKind.MAIN -> taskId.hashCode()
@@ -111,7 +118,7 @@ class NotificationHelper @Inject constructor(
             .setContentText(body)
             .setPriority(priority)
             .setAutoCancel(true)
-            .setContentIntent(buildContentIntent(taskId))
+            .setContentIntent(buildContentIntent(taskId, parentId))
             .addAction(
                 AndroidR.drawable.checkbox_on_background,
                 context.getString(R.string.notification_action_complete),
@@ -138,10 +145,17 @@ class NotificationHelper @Inject constructor(
         manager.cancel(notificationId(taskId, NotificationKind.FOLLOWUP))
     }
 
-    private fun buildContentIntent(taskId: String): PendingIntent {
+    private fun buildContentIntent(taskId: String, parentId: String?): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(EXTRA_OPEN_TASK_ID, taskId)
+            if (parentId != null) {
+                // Subtask: open the parent's detail with this subtask pre-expanded,
+                // exactly like tapping the subtask on the list screen.
+                putExtra(EXTRA_OPEN_TASK_ID, parentId)
+                putExtra(EXTRA_EXPAND_SUBTASK_ID, taskId)
+            } else {
+                putExtra(EXTRA_OPEN_TASK_ID, taskId)
+            }
         }
         return PendingIntent.getActivity(
             context,

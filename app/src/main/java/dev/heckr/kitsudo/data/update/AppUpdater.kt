@@ -65,8 +65,23 @@ class AppUpdater @Inject constructor() {
         }
     }
 
-    /** Call from ViewModel.init - syncs state with whatever UpdateChecker already knows. */
-    fun syncFromChecker() {
+    private var syncListenerRegistered = false
+
+    /**
+     * Persistent listener that keeps [_status] in sync with the background check
+     * kicked off at app launch. Without this, a check that completes *after* the
+     * ViewModel reads state (the common case at boot) would never surface the
+     * "update available" badge until the user manually opened Settings.
+     */
+    private val syncListener: () -> Unit = {
+        // Never clobber an active download/install/check flow.
+        when (_status.value) {
+            is Status.Checking, is Status.Downloading, is Status.Installing -> Unit
+            else -> reconcileStatus()
+        }
+    }
+
+    private fun reconcileStatus() {
         _status.value = when {
             UpdateChecker.updateAvailable ->
                 Status.Available(UpdateChecker.latestVersion ?: "")
@@ -74,6 +89,15 @@ class AppUpdater @Inject constructor() {
                 Status.Error(UpdateChecker.lastCheckError ?: "")
             else -> Status.Idle
         }
+    }
+
+    /** Call from ViewModel.init - syncs state with whatever UpdateChecker already knows. */
+    fun syncFromChecker() {
+        if (!syncListenerRegistered) {
+            UpdateChecker.addListener(syncListener)
+            syncListenerRegistered = true
+        }
+        reconcileStatus()
     }
 
     /**

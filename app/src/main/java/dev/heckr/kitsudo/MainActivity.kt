@@ -24,25 +24,29 @@ class MainActivity : ComponentActivity() {
 
     private val themeViewModel: ThemeViewModel by viewModels()
 
+    /** A task (and optional subtask to expand) to open from a notification tap. */
+    data class PendingOpen(val taskId: String, val expandSubtaskId: String?)
+
     /**
-     * Holds the task id from the most recent notification tap. The NavHost
+     * Holds the target from the most recent notification tap. The NavHost
      * collects this and navigates to TaskDetail when it becomes non-null.
      * Reset to null after consumption (handled inside the NavHost).
      */
-    private val pendingTaskId = MutableStateFlow<String?>(null)
+    private val pendingOpen = MutableStateFlow<PendingOpen?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         UpdateChecker.check(this)
-        pendingTaskId.value = intent?.extractOpenTaskId()
+        pendingOpen.value = intent?.extractPendingOpen()
         setContent {
             val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()
-            val startTaskId by pendingTaskId.collectAsState()
+            val startOpen by pendingOpen.collectAsState()
             KitsudoTheme(palette = uiState.palette, accent = uiState.accent) {
                 KitsudoNavHost(
-                    startTaskId = startTaskId,
-                    onStartTaskHandled = { pendingTaskId.value = null },
+                    startTaskId = startOpen?.taskId,
+                    startExpandSubtaskId = startOpen?.expandSubtaskId,
+                    onStartTaskHandled = { pendingOpen.value = null },
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -53,9 +57,14 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         // Update the backing intent so further onNewIntent calls see the new extras.
         setIntent(intent)
-        intent.extractOpenTaskId()?.let { pendingTaskId.value = it }
+        intent.extractPendingOpen()?.let { pendingOpen.value = it }
     }
 
-    private fun Intent.extractOpenTaskId(): String? =
-        getStringExtra(NotificationHelper.EXTRA_OPEN_TASK_ID)
+    private fun Intent.extractPendingOpen(): PendingOpen? {
+        val taskId = getStringExtra(NotificationHelper.EXTRA_OPEN_TASK_ID) ?: return null
+        return PendingOpen(
+            taskId = taskId,
+            expandSubtaskId = getStringExtra(NotificationHelper.EXTRA_EXPAND_SUBTASK_ID),
+        )
+    }
 }
