@@ -79,6 +79,14 @@
     <string name="deadline_picker_back">Back</string>
     <string name="deadline_picker_confirm">Confirm</string>
     <string name="deadline_picker_time_title">Pick a time</string>
+    <string name="deadline_picker_title">Set deadline</string>
+    <string name="deadline_preset_today">Today</string>
+    <string name="deadline_preset_tonight">Tonight</string>
+    <string name="deadline_preset_tomorrow">Tomorrow</string>
+    <string name="deadline_preset_weekend">Weekend</string>
+    <string name="deadline_preset_next_week">Next week</string>
+    <string name="deadline_relative_today">Today</string>
+    <string name="deadline_relative_tomorrow">Tomorrow</string>
 
     <!-- Notifications -->
     <string name="notification_channel_name">Task deadlines</string>
