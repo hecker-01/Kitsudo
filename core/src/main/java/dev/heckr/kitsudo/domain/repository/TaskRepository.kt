@@ -11,6 +11,9 @@ interface TaskRepository {
     /** Emits subtasks for a given parent task id. */
     fun getSubtasks(parentId: String): Flow<List<Task>>
 
+    /** One-shot snapshot of a parent's subtasks (for capturing state before deletion). */
+    suspend fun getSubtasksOnce(parentId: String): List<Task>
+
     suspend fun getTaskById(id: String): Task?
     fun observeTask(id: String): Flow<Task?>
 

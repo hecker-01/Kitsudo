@@ -52,6 +52,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -109,8 +114,28 @@ fun TaskListScreen(
         }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val deletedMessage = stringResource(R.string.task_deleted_message)
+    val undoLabel = stringResource(R.string.task_swipe_undo)
+    LaunchedEffect(viewModel) {
+        viewModel.deleteEvents.collect {
+            // Replace any still-showing snackbar so rapid deletes don't queue up.
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = snackbarHostState.showSnackbar(
+                message = deletedMessage,
+                actionLabel = undoLabel,
+                withDismissAction = true,
+                duration = SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.undoDelete()
+            }
+        }
+    }
+
     TaskListContent(
         uiState = uiState,
+        snackbarHostState = snackbarHostState,
         onOpenSettings = onOpenSettings,
         onOpenTask = onOpenTask,
         onOpenSubtask = onOpenSubtask,
@@ -131,6 +156,7 @@ fun TaskListScreen(
 @Composable
 private fun TaskListContent(
     uiState: TaskListUiState,
+    snackbarHostState: SnackbarHostState,
     onOpenSettings: () -> Unit,
     onOpenTask: (String) -> Unit,
     onOpenSubtask: (parentId: String, subtaskId: String) -> Unit,
@@ -176,6 +202,17 @@ private fun TaskListContent(
         floatingActionButton = {
             FloatingActionButton(onClick = onShowAddSheet) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.task_add_label))
+            }
+        },
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    actionColor = MaterialTheme.colorScheme.primary,
+                    dismissActionContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
         modifier = modifier,
@@ -401,22 +438,6 @@ private fun TaskCard(
             .background(MaterialTheme.colorScheme.surface)
             .then(dragModifier),
     ) {
-        // Thin accent bar - error colour for overdue, primary for high-priority-only
-        when {
-            task.isDeadlineOverdue -> Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .background(MaterialTheme.colorScheme.error),
-            )
-            task.isHighPriority && !task.isCompleted -> Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .background(MaterialTheme.colorScheme.primary),
-            )
-        }
-
         // -- Swipeable header (action fires on finger lift only) --------
         SwipeActionBox(
             onSwipeLeft = onDelete,
@@ -575,7 +596,23 @@ private fun TaskCard(
             }
         }
 
-        HorizontalDivider()
+        // Thin accent bar underneath the item - error colour for overdue,
+        // primary for high-priority-only, plain divider otherwise.
+        when {
+            task.isDeadlineOverdue -> Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(MaterialTheme.colorScheme.error),
+            )
+            task.isHighPriority && !task.isCompleted -> Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(MaterialTheme.colorScheme.primary),
+            )
+            else -> HorizontalDivider()
+        }
     }
 }
 
@@ -813,6 +850,7 @@ private fun TaskListPreview() {
                     ),
                 ),
             ),
+            snackbarHostState = remember { SnackbarHostState() },
             onOpenSettings = {}, onOpenTask = {}, onOpenSubtask = { _, _ -> },
             onShowAddSheet = {},
             onHideAddSheet = {}, onAddTask = { _, _, _ -> },

@@ -26,6 +26,13 @@ interface TaskDao {
     )
     fun getSubtasks(parentId: String): Flow<List<TaskEntity>>
 
+    /** One-shot snapshot of a parent's subtasks (used to capture state before deletion). */
+    @Query(
+        "SELECT * FROM tasks WHERE parentId = :parentId " +
+            "ORDER BY sortOrder ASC, createdAt ASC",
+    )
+    suspend fun getSubtasksOnce(parentId: String): List<TaskEntity>
+
     @Query("SELECT * FROM tasks WHERE id = :id")
     suspend fun getTaskById(id: String): TaskEntity?
 

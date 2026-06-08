@@ -12,17 +12,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RippleConfiguration
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -53,6 +57,9 @@ import kotlin.math.abs
 /** Visual constants for the scroll wheels. Must be odd so a row sits dead-center. */
 private const val WHEEL_VISIBLE_ROWS = 5
 private val WheelRowHeight = 40.dp
+
+/** Combined width of the hour:minute wheel pair in the time-only picker. */
+private val WheelGroupWidth = 180.dp
 
 /**
  * Cyclic wheels (hour/minute) render their values repeated this many times and
@@ -160,17 +167,25 @@ fun DeadlinePicker(
             )
 
             // -- Presets -------------------------------------------------
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
+            // Force the chip press/hover state layer to the accent color instead
+            // of the inherited content-color tint (which read as a muddy red).
+            CompositionLocalProvider(
+                LocalRippleConfiguration provides RippleConfiguration(
+                    color = MaterialTheme.colorScheme.primary,
+                ),
             ) {
-                presets(today).forEach { preset ->
-                    SuggestionChip(
-                        onClick = { applyPreset(preset.moment) },
-                        label = { Text(stringResource(preset.labelRes)) },
-                    )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                ) {
+                    presets(today).forEach { preset ->
+                        SuggestionChip(
+                            onClick = { applyPreset(preset.moment) },
+                            label = { Text(stringResource(preset.labelRes)) },
+                        )
+                    }
                 }
             }
 
@@ -247,6 +262,120 @@ fun DeadlinePicker(
                 TextButton(onClick = {
                     val millis = selectedMillis()
                     dismissThen { onDeadlinePicked(millis) }
+                }) {
+                    Text(stringResource(R.string.deadline_picker_confirm))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Time-only picker: a bottom sheet with just the hour · minute snap-scrolling
+ * wheels from [DeadlinePicker]. Used for settings (e.g. quiet hours) where only
+ * a time of day matters. [initialMinutes] / the result are minutes-since-midnight.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TimeWheelPicker(
+    title: String,
+    initialMinutes: Int,
+    onTimePicked: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val initHour = initialMinutes / 60
+    val initMinute = initialMinutes % 60
+
+    val hourState = rememberLazyListState(WHEEL_REPEAT / 2 * 24 + initHour)
+    val minuteState = rememberLazyListState(WHEEL_REPEAT / 2 * 60 + initMinute)
+
+    var hour by remember { mutableIntStateOf(initHour) }
+    var minute by remember { mutableIntStateOf(initMinute) }
+
+    val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    fun dismissThen(after: () -> Unit) {
+        scope.launch { sheetState.hide() }.invokeOnCompletion {
+            if (!sheetState.isVisible) after()
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    .height(WheelRowHeight * WHEEL_VISIBLE_ROWS),
+                contentAlignment = Alignment.Center,
+            ) {
+                // Center selection highlight, sized to the two wheels.
+                Box(
+                    modifier = Modifier
+                        .width(WheelGroupWidth)
+                        .height(WheelRowHeight)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.width(WheelGroupWidth),
+                ) {
+                    WheelColumn(
+                        state = hourState,
+                        valueCount = 24,
+                        cyclic = true,
+                        onCentered = { hour = it },
+                        label = { "%02d".format(it) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = ":",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    WheelColumn(
+                        state = minuteState,
+                        valueCount = 60,
+                        cyclic = true,
+                        onCentered = { minute = it },
+                        label = { "%02d".format(it) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+            ) {
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = { dismissThen(onDismiss) }) {
+                    Text(stringResource(R.string.deadline_picker_cancel))
+                }
+                TextButton(onClick = {
+                    val picked = hour * 60 + minute
+                    dismissThen { onTimePicked(picked) }
                 }) {
                     Text(stringResource(R.string.deadline_picker_confirm))
                 }

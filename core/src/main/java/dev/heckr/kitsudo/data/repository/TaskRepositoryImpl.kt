@@ -20,6 +20,9 @@ class TaskRepositoryImpl @Inject constructor(
     override fun getSubtasks(parentId: String): Flow<List<Task>> =
         taskDao.getSubtasks(parentId).map { list -> list.map { it.toDomain() } }
 
+    override suspend fun getSubtasksOnce(parentId: String): List<Task> =
+        taskDao.getSubtasksOnce(parentId).map { it.toDomain() }
+
     override suspend fun getTaskById(id: String): Task? =
         taskDao.getTaskById(id)?.toDomain()
 

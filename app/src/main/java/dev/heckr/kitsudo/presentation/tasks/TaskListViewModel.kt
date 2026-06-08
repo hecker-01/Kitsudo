@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.heckr.kitsudo.data.notification.NotificationScheduler
 import dev.heckr.kitsudo.data.update.AppUpdater
+import dev.heckr.kitsudo.domain.model.DeletedTask
 import dev.heckr.kitsudo.domain.model.TaskSortMode
 import dev.heckr.kitsudo.domain.repository.TaskListPreferencesRepository
 import dev.heckr.kitsudo.domain.usecase.CascadeCompleteUseCase
@@ -12,9 +13,13 @@ import dev.heckr.kitsudo.domain.usecase.CreateTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.DeleteTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.GetTasksUseCase
 import dev.heckr.kitsudo.domain.usecase.ReorderTasksUseCase
+import dev.heckr.kitsudo.domain.usecase.RestoreTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.UpdateTaskUseCase
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -31,6 +36,7 @@ class TaskListViewModel @Inject constructor(
     private val createTaskUseCase: CreateTaskUseCase,
     private val cascadeCompleteUseCase: CascadeCompleteUseCase,
     private val deleteTaskUseCase: DeleteTaskUseCase,
+    private val restoreTaskUseCase: RestoreTaskUseCase,
     private val updateTaskUseCase: UpdateTaskUseCase,
     private val reorderTasksUseCase: ReorderTasksUseCase,
     private val taskListPreferencesRepository: TaskListPreferencesRepository,
@@ -40,6 +46,13 @@ class TaskListViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(TaskListUiState())
     val uiState: StateFlow<TaskListUiState> = _uiState.asStateFlow()
+
+    /** Snapshot of the most recent deletion, kept until the undo window closes. */
+    private var pendingDelete: DeletedTask? = null
+
+    /** Emits whenever a task is deleted, so the UI can offer an undo snackbar. */
+    private val _deleteEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val deleteEvents: SharedFlow<Unit> = _deleteEvents.asSharedFlow()
 
     init {
         appUpdater.status
@@ -136,7 +149,42 @@ class TaskListViewModel @Inject constructor(
     fun deleteTask(taskId: String) {
         viewModelScope.launch {
             notificationScheduler.cancel(taskId)
-            deleteTaskUseCase(taskId)
+            deleteTaskUseCase(taskId).onSuccess { deleted ->
+                pendingDelete = deleted
+                _deleteEvents.tryEmit(Unit)
+            }
+        }
+    }
+
+    /** Re-inserts the last deleted task (and its subtasks) and reschedules its notifications. */
+    fun undoDelete() {
+        val deleted = pendingDelete ?: return
+        pendingDelete = null
+        viewModelScope.launch {
+            restoreTaskUseCase(deleted).onSuccess {
+                rescheduleNotifications(deleted)
+            }
+        }
+    }
+
+    /** Reschedules deadline notifications for a restored task and its incomplete subtasks. */
+    private suspend fun rescheduleNotifications(deleted: DeletedTask) {
+        val task = deleted.task
+        if (!task.isCompleted) {
+            task.deadlineAt?.let { notificationScheduler.schedule(task.id, task.title, it) }
+        }
+        deleted.subtasks.forEach { sub ->
+            if (!sub.isCompleted) {
+                sub.deadlineAt?.let {
+                    notificationScheduler.schedule(
+                        taskId = sub.id,
+                        taskTitle = sub.title,
+                        deadlineAt = it,
+                        parentId = task.id,
+                        parentTitle = task.title,
+                    )
+                }
+            }
         }
     }
 }
