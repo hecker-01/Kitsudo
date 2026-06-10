@@ -128,7 +128,7 @@ class AppUpdater @Inject constructor() {
      */
     fun onUpdateTapped(context: Context): Boolean {
         // Play Store builds hand off to Google Play rather than self-updating.
-        if (isInstalledFromPlayStore(context)) {
+        if (BuildConfig.PLAY_STORE_BUILD || isInstalledFromPlayStore(context)) {
             openPlayStore(context)
             return false
         }

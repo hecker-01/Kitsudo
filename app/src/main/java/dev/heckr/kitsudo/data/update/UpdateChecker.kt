@@ -1,6 +1,7 @@
 package dev.heckr.kitsudo.data.update
 
 import android.content.Context
+import dev.heckr.kitsudo.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -47,7 +48,7 @@ object UpdateChecker {
 
     fun check(context: Context) {
         // Play Store builds update through Google Play; never self-update.
-        if (InstallSource.isFromPlayStore(context)) return
+        if (BuildConfig.PLAY_STORE_BUILD || InstallSource.isFromPlayStore(context)) return
         if (isChecking || updateAvailable) return
         isChecking = true
 

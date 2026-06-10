@@ -211,7 +211,7 @@ private fun SettingsContent(
                     SectionLabel(stringResource(R.string.settings_section_updates))
                     UpdateCard(
                         status = uiState.updateStatus,
-                        isPlayStoreInstall = uiState.isPlayStoreInstall,
+                        usePlayStoreUpdates = uiState.usePlayStoreUpdates,
                         onTap = onUpdateCardTapped,
                     )
 
@@ -588,13 +588,13 @@ private fun ThemeOptionCard(
 @Composable
 private fun UpdateCard(
     status: AppUpdater.Status,
-    isPlayStoreInstall: Boolean,
+    usePlayStoreUpdates: Boolean,
     onTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
     // Play Store builds defer updates to Google Play - no self-update progress.
-    val isActive = !isPlayStoreInstall && (
+    val isActive = !usePlayStoreUpdates && (
         status is AppUpdater.Status.Downloading ||
             status is AppUpdater.Status.Installing ||
             status is AppUpdater.Status.Checking
@@ -617,14 +617,14 @@ private fun UpdateCard(
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = stringResource(
-                    if (isPlayStoreInstall) R.string.settings_updates_play_store_title
+                    if (usePlayStoreUpdates) R.string.settings_updates_play_store_title
                     else R.string.settings_updates_check,
                 ),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = if (isPlayStoreInstall) {
+                text = if (usePlayStoreUpdates) {
                     stringResource(R.string.settings_updates_play_store_hint)
                 } else {
                     updateSubtitle(status)

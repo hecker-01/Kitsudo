@@ -45,7 +45,8 @@ class SettingsViewModel @Inject constructor(
             versionCode = BuildConfig.VERSION_CODE.toLong(),
             isDebug = BuildConfig.DEBUG,
             packageName = BuildConfig.APPLICATION_ID,
-            isPlayStoreInstall = appUpdater.isInstalledFromPlayStore(appContext),
+            usePlayStoreUpdates = BuildConfig.PLAY_STORE_BUILD ||
+                appUpdater.isInstalledFromPlayStore(appContext),
         ),
     )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()

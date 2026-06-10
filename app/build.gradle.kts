@@ -75,9 +75,14 @@ android {
         create("github") {
             dimension = "distribution"
             isDefault = true
+            // Sideloaded build: the in-app self-updater is active.
+            buildConfigField("boolean", "PLAY_STORE_BUILD", "false")
         }
         create("play") {
             dimension = "distribution"
+            // Play Store build: updates go through Google Play. The self-updater
+            // is disabled and the Settings card always points at the Play listing.
+            buildConfigField("boolean", "PLAY_STORE_BUILD", "true")
         }
     }
 
