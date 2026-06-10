@@ -8,9 +8,20 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-val gitCommitCount = providers.exec {
-    commandLine("git", "rev-list", "--count", "HEAD")
-}.standardOutput.asText.get().trim().toInt()
+// versionCode is the commit count. The git reflog (appended on every commit,
+// checkout, or reset) is wired in as a tracked input so the configuration cache
+// re-evaluates the count whenever HEAD moves; without it a cached configuration
+// can ship a stale versionCode, which Play rejects as non-monotonic. Applies to
+// every variant (github + play) identically since it feeds defaultConfig.
+val gitReflog = providers.fileContents(
+    rootProject.layout.projectDirectory.file(".git/logs/HEAD"),
+).asText.orElse("")
+
+val gitCommitCount = gitReflog.zip(
+    providers.exec {
+        commandLine("git", "rev-list", "--count", "HEAD")
+    }.standardOutput.asText,
+) { _, count -> count.trim().toInt() }.get()
 
 // -- Signing ----------------------------------------------------------------
 // Credentials are read from local.properties (gitignored) so they never
