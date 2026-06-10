@@ -55,6 +55,21 @@ android {
         }
     }
 
+    // Distribution channels. The two flavors differ only in their manifest:
+    // `github` (sideloaded) declares the install/storage permissions the in-app
+    // self-updater needs; `play` omits them because the Play Store handles
+    // updates and Google Play restricts REQUEST_INSTALL_PACKAGES.
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("github") {
+            dimension = "distribution"
+            isDefault = true
+        }
+        create("play") {
+            dimension = "distribution"
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".dev"
@@ -98,9 +113,13 @@ android {
 androidComponents {
     onVariants { variant ->
         val versionName = android.defaultConfig.versionName ?: "0.0.0"
+        val dashed = versionName.replace(Regex("-.*"), "").replace(".", "-")
+        // `github` keeps the historical bare names; `play` is prefixed so the
+        // two flavors' outputs never collide.
+        val flavorPrefix = if (variant.flavorName == "play") "play-" else ""
         val apkFileName = when (variant.buildType) {
-            "debug" -> "kitsudo-dev-${versionName.replace(Regex("-.*"), "").replace(".", "-")}.apk"
-            "release" -> "kitsudo-release-${versionName.replace(".", "-")}.apk"
+            "debug" -> "kitsudo-${flavorPrefix}dev-$dashed.apk"
+            "release" -> "kitsudo-${flavorPrefix}release-$dashed.apk"
             else -> "ptdl-${variant.name}.apk"
         }
         variant.outputs.forEach { output ->
