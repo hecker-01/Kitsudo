@@ -34,6 +34,9 @@ object UpdateChecker {
     private const val RELEASES_URL =
         "https://api.github.com/repos/hecker-01/kitsudo/releases/latest"
 
+    private const val RELEASE_BY_TAG_URL =
+        "https://api.github.com/repos/hecker-01/kitsudo/releases/tags/"
+
     fun addListener(listener: () -> Unit) {
         listeners.add(listener)
     }
@@ -43,6 +46,8 @@ object UpdateChecker {
     }
 
     fun check(context: Context) {
+        // Play Store builds update through Google Play; never self-update.
+        if (InstallSource.isFromPlayStore(context)) return
         if (isChecking || updateAvailable) return
         isChecking = true
 
@@ -95,6 +100,41 @@ object UpdateChecker {
 
             isChecking = false
             withContext(Dispatchers.Main) { listeners.forEach { it() } }
+        }
+    }
+
+    /**
+     * Fetches the release-notes markdown for a specific version's tag, used by
+     * the "What's New" sheet after an update so the notes match what was just
+     * installed. Tags are published without a `v` prefix, so the bare
+     * `<version>` tag is tried first, with `v<version>` as a fallback.
+     * Returns null on any failure (offline, no matching release, etc.).
+     */
+    suspend fun fetchReleaseNotes(versionName: String): String? = withContext(Dispatchers.IO) {
+        val clean = versionName.substringBefore("-") // drop "-dev" / build suffixes
+        fetchBodyForTag(clean) ?: fetchBodyForTag("v$clean")
+    }
+
+    private fun fetchBodyForTag(tag: String): String? {
+        var conn: HttpURLConnection? = null
+        return try {
+            conn = (URL(RELEASE_BY_TAG_URL + tag).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                setRequestProperty("Accept", "application/vnd.github.v3+json")
+                connectTimeout = 10_000
+                readTimeout = 10_000
+            }
+            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
+                JSONObject(conn.inputStream.bufferedReader().readText())
+                    .optString("body", "")
+                    .ifBlank { null }
+            } else {
+                null
+            }
+        } catch (_: Exception) {
+            null
+        } finally {
+            conn?.disconnect()
         }
     }
 

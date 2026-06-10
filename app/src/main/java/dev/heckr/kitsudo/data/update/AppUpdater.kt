@@ -1,5 +1,6 @@
 package dev.heckr.kitsudo.data.update
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -100,11 +101,37 @@ class AppUpdater @Inject constructor() {
         reconcileStatus()
     }
 
+    /** True when the app was installed from the Google Play Store. */
+    fun isInstalledFromPlayStore(context: Context): Boolean =
+        InstallSource.isFromPlayStore(context)
+
+    /** Opens the app's Google Play listing, falling back to the web URL. */
+    fun openPlayStore(context: Context) {
+        val pkg = context.packageName
+        val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkg"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            context.startActivity(market)
+        } catch (_: ActivityNotFoundException) {
+            context.startActivity(
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("https://play.google.com/store/apps/details?id=$pkg"),
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+    }
+
     /**
      * Called when the user taps the update card.
      * Returns true if an update is already known (caller should show the confirm dialog).
      */
     fun onUpdateTapped(context: Context): Boolean {
+        // Play Store builds hand off to Google Play rather than self-updating.
+        if (isInstalledFromPlayStore(context)) {
+            openPlayStore(context)
+            return false
+        }
         return when (_status.value) {
             is Status.Available -> true
             is Status.Downloading, is Status.Installing -> false

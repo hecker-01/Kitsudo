@@ -10,6 +10,7 @@ data class SettingsUiState(
     val accent: CatppuccinAccent = CatppuccinAccent.default,
     val notifications: NotificationPreferences = NotificationPreferences(),
     val updateStatus: AppUpdater.Status = AppUpdater.Status.Idle,
+    val isPlayStoreInstall: Boolean = false,
     val showUpdateDialog: Boolean = false,
     val versionName: String = "",
     val versionCode: Long = 0L,

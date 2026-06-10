@@ -209,7 +209,11 @@ private fun SettingsContent(
 
                     // -- Updates -----------------------------------------------
                     SectionLabel(stringResource(R.string.settings_section_updates))
-                    UpdateCard(status = uiState.updateStatus, onTap = onUpdateCardTapped)
+                    UpdateCard(
+                        status = uiState.updateStatus,
+                        isPlayStoreInstall = uiState.isPlayStoreInstall,
+                        onTap = onUpdateCardTapped,
+                    )
 
                     // -- About -------------------------------------------------
                     SectionLabel(stringResource(R.string.settings_section_about))
@@ -584,13 +588,17 @@ private fun ThemeOptionCard(
 @Composable
 private fun UpdateCard(
     status: AppUpdater.Status,
+    isPlayStoreInstall: Boolean,
     onTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
-    val isActive = status is AppUpdater.Status.Downloading ||
-        status is AppUpdater.Status.Installing ||
-        status is AppUpdater.Status.Checking
+    // Play Store builds defer updates to Google Play - no self-update progress.
+    val isActive = !isPlayStoreInstall && (
+        status is AppUpdater.Status.Downloading ||
+            status is AppUpdater.Status.Installing ||
+            status is AppUpdater.Status.Checking
+        )
 
     Card(
         onClick = {
@@ -608,12 +616,19 @@ private fun UpdateCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringResource(R.string.settings_updates_check),
+                text = stringResource(
+                    if (isPlayStoreInstall) R.string.settings_updates_play_store_title
+                    else R.string.settings_updates_check,
+                ),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = updateSubtitle(status),
+                text = if (isPlayStoreInstall) {
+                    stringResource(R.string.settings_updates_play_store_hint)
+                } else {
+                    updateSubtitle(status)
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),

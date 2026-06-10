@@ -16,6 +16,8 @@ import dev.heckr.kitsudo.data.notification.NotificationHelper
 import dev.heckr.kitsudo.data.update.UpdateChecker
 import dev.heckr.kitsudo.presentation.navigation.KitsudoNavHost
 import dev.heckr.kitsudo.presentation.theme.ThemeViewModel
+import dev.heckr.kitsudo.presentation.update.WhatsNewDialog
+import dev.heckr.kitsudo.presentation.update.WhatsNewViewModel
 import dev.heckr.kitsudo.ui.theme.KitsudoTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -23,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 class MainActivity : ComponentActivity() {
 
     private val themeViewModel: ThemeViewModel by viewModels()
+    private val whatsNewViewModel: WhatsNewViewModel by viewModels()
 
     /** A task (and optional subtask to expand) to open from a notification tap. */
     data class PendingOpen(val taskId: String, val expandSubtaskId: String?)
@@ -42,12 +45,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()
             val startOpen by pendingOpen.collectAsState()
+            val whatsNewState by whatsNewViewModel.state.collectAsStateWithLifecycle()
             KitsudoTheme(palette = uiState.palette, accent = uiState.accent) {
                 KitsudoNavHost(
                     startTaskId = startOpen?.taskId,
                     startExpandSubtaskId = startOpen?.expandSubtaskId,
                     onStartTaskHandled = { pendingOpen.value = null },
                     modifier = Modifier.fillMaxSize(),
+                )
+                WhatsNewDialog(
+                    state = whatsNewState,
+                    onDismiss = whatsNewViewModel::dismiss,
                 )
             }
         }
