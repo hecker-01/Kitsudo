@@ -9,9 +9,20 @@ plugins {
     alias(libs.plugins.room)
 }
 
-val gitCommitCount = providers.exec {
-    commandLine("git", "rev-list", "--count", "HEAD")
-}.standardOutput.asText.get().trim().toInt()
+// versionCode is the commit count, kept in lockstep with the phone app so the
+// two Play bundles share a versionCode. The git reflog (appended on every commit,
+// checkout, or reset) is wired in as a tracked input so the configuration cache
+// re-evaluates the count whenever HEAD moves instead of reusing a stale value,
+// which Play rejects as non-monotonic.
+val gitReflog = providers.fileContents(
+    rootProject.layout.projectDirectory.file(".git/logs/HEAD"),
+).asText.orElse("")
+
+val gitCommitCount = gitReflog.zip(
+    providers.exec {
+        commandLine("git", "rev-list", "--count", "HEAD")
+    }.standardOutput.asText,
+) { _, count -> count.trim().toInt() }.get()
 
 // -- Signing ----------------------------------------------------------------
 // Credentials are read from local.properties (gitignored) so they never
