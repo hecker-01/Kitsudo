@@ -9,11 +9,10 @@ plugins {
     alias(libs.plugins.room)
 }
 
-// versionCode is the commit count, kept in lockstep with the phone app so the
-// two Play bundles share a versionCode. The git reflog (appended on every commit,
-// checkout, or reset) is wired in as a tracked input so the configuration cache
-// re-evaluates the count whenever HEAD moves instead of reusing a stale value,
-// which Play rejects as non-monotonic.
+// versionCode tracks the commit count, like the phone app. The git reflog
+// (appended on every commit, checkout, or reset) is wired in as a tracked input
+// so the configuration cache re-evaluates the count whenever HEAD moves instead
+// of reusing a stale value, which Play rejects as non-monotonic.
 val gitReflog = providers.fileContents(
     rootProject.layout.projectDirectory.file(".git/logs/HEAD"),
 ).asText.orElse("")
@@ -23,6 +22,12 @@ val gitCommitCount = gitReflog.zip(
         commandLine("git", "rev-list", "--count", "HEAD")
     }.standardOutput.asText,
 ) { _, count -> count.trim().toInt() }.get()
+
+// Wear and phone ship as separate bundles under one Play listing, so their
+// version codes must be unique. Keep Wear in a higher, non-overlapping range
+// (offset) so Play prefers the Wear bundle on a watch when both could match, and
+// so the two ranges never collide as the commit count grows.
+val wearVersionCode = gitCommitCount + 1_000_000
 
 // -- Signing ----------------------------------------------------------------
 // Credentials are read from local.properties (gitignored) so they never
@@ -50,7 +55,7 @@ android {
         applicationId = "dev.heckr.kitsudo"
         minSdk = 33
         targetSdk = 36
-        versionCode = gitCommitCount
+        versionCode = wearVersionCode
         versionName = versionNameStr
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
