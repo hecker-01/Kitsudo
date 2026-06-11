@@ -218,6 +218,36 @@
         name="settings_updates_play_store_hint"
     >Tap to open the Play Store listing</string>
 
+    <!-- Onboarding (shown once on first install) -->
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_get_started">Get started</string>
+    <string name="onboarding_welcome_title">Welcome to Kitsudo</string>
+    <string
+        name="onboarding_welcome_body"
+    >A calm, focused way to keep on top of everything you need to do.</string>
+    <string name="onboarding_tasks_title">Tasks and subtasks</string>
+    <string
+        name="onboarding_tasks_body"
+    >Break big tasks into subtasks. Finish a task and its subtasks tick off with it.</string>
+    <string name="onboarding_swipe_title">Swipe to act</string>
+    <string
+        name="onboarding_swipe_body"
+    >Swipe a task right to complete it, or left to delete it.</string>
+    <string name="onboarding_deadlines_title">Deadlines and reminders</string>
+    <string
+        name="onboarding_deadlines_body"
+    >Add a deadline to any task and get a nudge before it is due.</string>
+    <string name="onboarding_theme_title">Make it yours</string>
+    <string
+        name="onboarding_theme_body"
+    >Pick a Catppuccin flavor or Material You from Settings whenever you like.</string>
+    <string name="onboarding_notifications_title">Turn on reminders?</string>
+    <string
+        name="onboarding_notifications_body"
+    >Kitsudo sends a notification before a task is due so deadlines don\'t slip by. Next, allow notifications so we can remind you.</string>
+    <string name="onboarding_notifications_ok">OK</string>
+
     <!-- What's new (shown on first launch after an update) -->
     <string name="whats_new_title">What\'s new</string>
     <string name="whats_new_title_format">What\'s new in %s</string>

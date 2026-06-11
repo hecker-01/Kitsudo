@@ -1,10 +1,6 @@
 package dev.heckr.kitsudo.presentation.tasks
 
-import android.Manifest
-import android.os.Build
 import android.view.HapticFeedbackConstants
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.animateFloatAsState
@@ -104,15 +100,6 @@ fun TaskListScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { }
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val deletedMessage = stringResource(R.string.task_deleted_message)
