@@ -23,6 +23,9 @@ mockk = "1.14.0"
 turbine = "1.2.0"
 dataStore = "1.1.2"
 reorderable = "2.4.3"
+protolayout = "1.2.1"
+tiles = "1.4.1"
+watchfaceComplications = "1.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -69,6 +72,13 @@ wear-compose-navigation = { group = "androidx.wear.compose", name = "compose-nav
 wear-tooling-preview = { group = "androidx.wear", name = "wear-tooling-preview", version = "1.0.0" }
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
+kotlinx-coroutines-guava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-guava", version.ref = "coroutines" }
+# Wear OS Tiles + Complications
+androidx-protolayout = { group = "androidx.wear.protolayout", name = "protolayout", version.ref = "protolayout" }
+androidx-protolayout-material = { group = "androidx.wear.protolayout", name = "protolayout-material", version.ref = "protolayout" }
+androidx-protolayout-expression = { group = "androidx.wear.protolayout", name = "protolayout-expression", version.ref = "protolayout" }
+androidx-tiles = { group = "androidx.wear.tiles", name = "tiles", version.ref = "tiles" }
+androidx-watchface-complications-data-source-ktx = { group = "androidx.wear.watchface", name = "watchface-complications-data-source-ktx", version.ref = "watchfaceComplications" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

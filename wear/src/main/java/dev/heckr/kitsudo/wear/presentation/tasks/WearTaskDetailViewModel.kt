@@ -1,15 +1,18 @@
 package dev.heckr.kitsudo.wear.presentation.tasks
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.heckr.kitsudo.data.local.dao.TaskDao
 import dev.heckr.kitsudo.data.mapper.toDomain
 import dev.heckr.kitsudo.domain.model.Task
 import dev.heckr.kitsudo.domain.model.TaskWithSubtasks
 import dev.heckr.kitsudo.domain.repository.TaskRepository
 import dev.heckr.kitsudo.wear.data.sync.TaskActionSender
+import dev.heckr.kitsudo.wear.glance.GlanceUpdater
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -29,6 +32,7 @@ class WearTaskDetailViewModel @Inject constructor(
     private val taskActionSender: TaskActionSender,
     private val taskDao: TaskDao,
     private val taskRepository: TaskRepository,
+    @param:ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     private val taskId: String = checkNotNull(savedStateHandle["taskId"])
@@ -59,6 +63,7 @@ class WearTaskDetailViewModel @Inject constructor(
             taskDao.updateTask(entity.copy(isCompleted = newState))
             // Tell the phone to apply cascade logic in the background
             taskActionSender.toggleComplete(taskId, newState)
+            GlanceUpdater.requestUpdate(context)
         }
     }
 }

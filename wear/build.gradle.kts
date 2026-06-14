@@ -168,4 +168,13 @@ dependencies {
     // Wearable Data Layer
     implementation(libs.play.services.wearable)
     implementation(libs.kotlinx.coroutines.play.services)
+
+    // Tiles + Complications (glanceable surfaces)
+    implementation(libs.androidx.protolayout)
+    implementation(libs.androidx.protolayout.material)
+    implementation(libs.androidx.protolayout.expression)
+    implementation(libs.androidx.tiles)
+    implementation(libs.androidx.watchface.complications.data.source.ktx)
+    // Bridges suspend functions to the ListenableFuture APIs the Tiles SDK expects.
+    implementation(libs.kotlinx.coroutines.guava)
 }

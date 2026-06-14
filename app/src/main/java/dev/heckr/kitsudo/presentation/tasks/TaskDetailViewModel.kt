@@ -5,10 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.heckr.kitsudo.data.notification.NotificationScheduler
+import dev.heckr.kitsudo.domain.model.CatppuccinAccent
 import dev.heckr.kitsudo.domain.model.Priority
+import dev.heckr.kitsudo.domain.model.RecurrenceUnit
+import dev.heckr.kitsudo.domain.repository.TagRepository
 import dev.heckr.kitsudo.domain.repository.TaskRepository
+import dev.heckr.kitsudo.domain.usecase.AdvanceRecurringTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.CascadeCompleteUseCase
 import dev.heckr.kitsudo.domain.usecase.CompleteTaskUseCase
+import dev.heckr.kitsudo.domain.usecase.CreateTagUseCase
 import dev.heckr.kitsudo.domain.usecase.CreateTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.DeleteTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.UpdateTaskUseCase
@@ -33,7 +38,10 @@ class TaskDetailViewModel @Inject constructor(
     private val deleteTaskUseCase: DeleteTaskUseCase,
     private val completeTaskUseCase: CompleteTaskUseCase,
     private val cascadeCompleteUseCase: CascadeCompleteUseCase,
+    private val advanceRecurringTaskUseCase: AdvanceRecurringTaskUseCase,
     private val createTaskUseCase: CreateTaskUseCase,
+    private val tagRepository: TagRepository,
+    private val createTagUseCase: CreateTagUseCase,
     private val notificationScheduler: NotificationScheduler,
 ) : ViewModel() {
 
@@ -49,11 +57,14 @@ class TaskDetailViewModel @Inject constructor(
     private val subtaskSaveJobs = mutableMapOf<String, Job>()
 
     init {
-        // Single reactive pipeline: both task and subtasks kept live from Room.
+        // Single reactive pipeline: task, subtasks, this task's tags, and the full
+        // tag list all kept live from Room.
         combine(
             taskRepository.observeTask(taskId),
             taskRepository.getSubtasks(taskId),
-        ) { task, subtasks ->
+            tagRepository.observeTagsForTask(taskId),
+            tagRepository.observeTags(),
+        ) { task, subtasks, tags, allTags ->
             if (task == null) {
                 _uiState.update { it.copy(isLoading = false, error = "Task not found") }
             } else {
@@ -61,6 +72,8 @@ class TaskDetailViewModel @Inject constructor(
                     it.copy(
                         task = task.toUi(),
                         subtasks = subtasks.map { s -> s.toUi() },
+                        tags = tags,
+                        allTags = allTags,
                         isLoading = false,
                         error = null,
                     )
@@ -69,6 +82,27 @@ class TaskDetailViewModel @Inject constructor(
         }
             .catch { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
             .launchIn(viewModelScope)
+    }
+
+    /** Adds or removes a tag assignment for this task. */
+    fun toggleTag(tagId: String) {
+        viewModelScope.launch {
+            val assigned = _uiState.value.tags.any { it.id == tagId }
+            tagRepository.setTagAssigned(taskId, tagId, !assigned)
+        }
+    }
+
+    /** Creates a tag (reusing a same-named one) and assigns it to this task. */
+    fun createAndAssignTag(name: String, color: CatppuccinAccent) {
+        viewModelScope.launch {
+            createTagUseCase(name, color).getOrNull()?.let { tag ->
+                tagRepository.setTagAssigned(taskId, tag.id, true)
+            }
+        }
+    }
+
+    fun deleteTag(tagId: String) {
+        viewModelScope.launch { tagRepository.deleteTag(tagId) }
     }
 
     /**
@@ -98,7 +132,9 @@ class TaskDetailViewModel @Inject constructor(
     fun setDeadline(deadlineAt: Long?) {
         viewModelScope.launch {
             val task = taskRepository.getTaskById(taskId) ?: return@launch
-            updateTaskUseCase(task.copy(deadlineAt = deadlineAt))
+            // Recurrence is anchored to a deadline; clearing the deadline drops it too.
+            val recurrenceUnit = if (deadlineAt == null) null else task.recurrenceUnit
+            updateTaskUseCase(task.copy(deadlineAt = deadlineAt, recurrenceUnit = recurrenceUnit))
             if (deadlineAt != null) {
                 notificationScheduler.schedule(task.id, task.title, deadlineAt)
             } else {
@@ -107,9 +143,37 @@ class TaskDetailViewModel @Inject constructor(
         }
     }
 
-    /** Cascades to all subtasks. */
+    /** Sets (or clears, with [unit] == null) the repeat rule for this task. */
+    fun setRecurrence(unit: RecurrenceUnit?, interval: Int) {
+        viewModelScope.launch {
+            val task = taskRepository.getTaskById(taskId) ?: return@launch
+            // No-op if there's no deadline to anchor the recurrence to.
+            if (unit != null && task.deadlineAt == null) return@launch
+            updateTaskUseCase(
+                task.copy(
+                    recurrenceUnit = unit,
+                    recurrenceInterval = interval.coerceAtLeast(1),
+                ),
+            )
+        }
+    }
+
+    /**
+     * Cascades to all subtasks. A recurring task rolls forward to its next
+     * occurrence (and reschedules its notification) instead of completing.
+     */
     fun toggleComplete(isCompleted: Boolean) {
         viewModelScope.launch {
+            if (isCompleted) {
+                val advanced = advanceRecurringTaskUseCase(taskId)
+                if (advanced != null) {
+                    notificationScheduler.cancel(taskId)
+                    advanced.deadlineAt?.let {
+                        notificationScheduler.schedule(advanced.id, advanced.title, it)
+                    }
+                    return@launch
+                }
+            }
             cascadeCompleteUseCase(taskId, isCompleted)
             if (isCompleted) notificationScheduler.cancel(taskId)
         }

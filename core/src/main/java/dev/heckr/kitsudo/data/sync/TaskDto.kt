@@ -1,6 +1,7 @@
 package dev.heckr.kitsudo.data.sync
 
 import dev.heckr.kitsudo.domain.model.Priority
+import dev.heckr.kitsudo.domain.model.RecurrenceUnit
 import dev.heckr.kitsudo.domain.model.SyncStatus
 import dev.heckr.kitsudo.domain.model.Task
 import kotlinx.serialization.Serializable
@@ -24,6 +25,8 @@ data class TaskDto(
     val deadlineAt: Long? = null,
     val sortOrder: Int = 0,
     val priority: Int = 0,
+    val recurrenceUnit: String? = null,
+    val recurrenceInterval: Int = 1,
 ) {
     companion object {
         fun fromDomain(task: Task) = TaskDto(
@@ -36,6 +39,8 @@ data class TaskDto(
             deadlineAt = task.deadlineAt,
             sortOrder = task.sortOrder,
             priority = task.priority.dbValue,
+            recurrenceUnit = task.recurrenceUnit?.name,
+            recurrenceInterval = task.recurrenceInterval,
         )
     }
 
@@ -50,5 +55,7 @@ data class TaskDto(
         deadlineAt = deadlineAt,
         sortOrder = sortOrder,
         priority = Priority.fromDb(priority),
+        recurrenceUnit = RecurrenceUnit.fromDb(recurrenceUnit),
+        recurrenceInterval = recurrenceInterval,
     )
 }

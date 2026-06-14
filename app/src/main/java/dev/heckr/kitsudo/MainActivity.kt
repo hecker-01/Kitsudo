@@ -53,6 +53,9 @@ class MainActivity : ComponentActivity() {
     /** A task (and optional subtask to expand) to open from a notification tap. */
     data class PendingOpen(val taskId: String, val expandSubtaskId: String?)
 
+    /** Text shared into the app (ACTION_SEND), to prefill a new task. */
+    data class SharedDraft(val title: String, val description: String)
+
     /**
      * Holds the target from the most recent notification tap. The NavHost
      * collects this and navigates to TaskDetail when it becomes non-null.
@@ -60,14 +63,19 @@ class MainActivity : ComponentActivity() {
      */
     private val pendingOpen = MutableStateFlow<PendingOpen?>(null)
 
+    /** Holds text from the most recent share, consumed once to open the Add sheet. */
+    private val pendingShare = MutableStateFlow<SharedDraft?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         appUpdater.checkForUpdates(this)
         pendingOpen.value = intent?.extractPendingOpen()
+        pendingShare.value = intent?.extractSharedDraft()
         setContent {
             val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()
             val startOpen by pendingOpen.collectAsState()
+            val startShare by pendingShare.collectAsState()
             val whatsNewState by whatsNewViewModel.state.collectAsStateWithLifecycle()
             val onboardingState by onboardingViewModel.state.collectAsStateWithLifecycle()
 
@@ -96,6 +104,9 @@ class MainActivity : ComponentActivity() {
                         startTaskId = startOpen?.taskId,
                         startExpandSubtaskId = startOpen?.expandSubtaskId,
                         onStartTaskHandled = { pendingOpen.value = null },
+                        sharedTitle = startShare?.title,
+                        sharedDescription = startShare?.description,
+                        onSharedHandled = { pendingShare.value = null },
                         modifier = Modifier.fillMaxSize(),
                     )
                     if (onboardingState == OnboardingState.Required) {
@@ -138,6 +149,7 @@ class MainActivity : ComponentActivity() {
         // Update the backing intent so further onNewIntent calls see the new extras.
         setIntent(intent)
         intent.extractPendingOpen()?.let { pendingOpen.value = it }
+        intent.extractSharedDraft()?.let { pendingShare.value = it }
     }
 
     private fun Intent.extractPendingOpen(): PendingOpen? {
@@ -146,6 +158,24 @@ class MainActivity : ComponentActivity() {
             taskId = taskId,
             expandSubtaskId = getStringExtra(NotificationHelper.EXTRA_EXPAND_SUBTASK_ID),
         )
+    }
+
+    /**
+     * Maps an ACTION_SEND text/plain intent to a [SharedDraft]: the subject (when
+     * present) becomes the title and the shared text the description; otherwise the
+     * text is the title. Returns null for anything that isn't a usable text share.
+     */
+    private fun Intent.extractSharedDraft(): SharedDraft? {
+        if (action != Intent.ACTION_SEND) return null
+        if (type?.startsWith("text/") != true) return null
+        val text = getStringExtra(Intent.EXTRA_TEXT)?.trim().orEmpty()
+        val subject = getStringExtra(Intent.EXTRA_SUBJECT)?.trim().orEmpty()
+        return when {
+            subject.isNotEmpty() && text.isNotEmpty() -> SharedDraft(subject, text)
+            subject.isNotEmpty() -> SharedDraft(subject, "")
+            text.isNotEmpty() -> SharedDraft(text, "")
+            else -> null
+        }
     }
 }
 

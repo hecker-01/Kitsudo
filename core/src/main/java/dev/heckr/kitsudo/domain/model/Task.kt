@@ -15,4 +15,15 @@ data class Task(
     val sortOrder: Int = 0,
     /** User-set importance. HIGH tasks float above NORMAL within each sort bucket. */
     val priority: Priority = Priority.NORMAL,
-)
+    /**
+     * Repeat period, or null for a one-off task. Only meaningful on top-level
+     * tasks with a [deadlineAt]; completing such a task rolls [deadlineAt] forward
+     * by [recurrenceInterval] of this unit instead of marking it done.
+     */
+    val recurrenceUnit: RecurrenceUnit? = null,
+    /** How many [recurrenceUnit]s between occurrences (e.g. 2 = every 2 weeks). */
+    val recurrenceInterval: Int = 1,
+) {
+    /** True when this task repeats (has a unit and a deadline to anchor it). */
+    val isRecurring: Boolean get() = recurrenceUnit != null && deadlineAt != null
+}

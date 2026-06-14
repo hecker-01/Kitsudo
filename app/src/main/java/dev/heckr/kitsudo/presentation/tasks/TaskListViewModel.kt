@@ -7,10 +7,16 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.heckr.kitsudo.data.notification.NotificationScheduler
 import dev.heckr.kitsudo.data.sync.TaskDto
 import dev.heckr.kitsudo.data.update.AppUpdater
+import dev.heckr.kitsudo.domain.model.CatppuccinAccent
 import dev.heckr.kitsudo.domain.model.DeletedTask
+import dev.heckr.kitsudo.domain.model.RecurrenceUnit
+import dev.heckr.kitsudo.domain.model.Tag
 import dev.heckr.kitsudo.domain.model.TaskSortMode
+import dev.heckr.kitsudo.domain.repository.TagRepository
 import dev.heckr.kitsudo.domain.repository.TaskListPreferencesRepository
+import dev.heckr.kitsudo.domain.usecase.AdvanceRecurringTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.CascadeCompleteUseCase
+import dev.heckr.kitsudo.domain.usecase.CreateTagUseCase
 import dev.heckr.kitsudo.domain.usecase.CreateTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.DeleteTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.GetTasksUseCase
@@ -42,10 +48,13 @@ class TaskListViewModel @Inject constructor(
     private val getTasksUseCase: GetTasksUseCase,
     private val createTaskUseCase: CreateTaskUseCase,
     private val cascadeCompleteUseCase: CascadeCompleteUseCase,
+    private val advanceRecurringTaskUseCase: AdvanceRecurringTaskUseCase,
     private val deleteTaskUseCase: DeleteTaskUseCase,
     private val restoreTaskUseCase: RestoreTaskUseCase,
     private val updateTaskUseCase: UpdateTaskUseCase,
     private val reorderTasksUseCase: ReorderTasksUseCase,
+    private val tagRepository: TagRepository,
+    private val createTagUseCase: CreateTagUseCase,
     private val taskListPreferencesRepository: TaskListPreferencesRepository,
     private val notificationScheduler: NotificationScheduler,
     private val appUpdater: AppUpdater,
@@ -69,6 +78,13 @@ class TaskListViewModel @Inject constructor(
     /** Emits whenever a task is deleted, so the UI can offer an undo snackbar. */
     private val _deleteEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val deleteEvents: SharedFlow<Unit> = _deleteEvents.asSharedFlow()
+
+    /**
+     * Emits the new deadline (epoch millis) when a recurring task is "completed"
+     * and rolled forward, so the UI can confirm the next occurrence in a snackbar.
+     */
+    private val _recurringRescheduledEvents = MutableSharedFlow<Long>(extraBufferCapacity = 1)
+    val recurringRescheduledEvents: SharedFlow<Long> = _recurringRescheduledEvents.asSharedFlow()
 
     /**
      * Ticks once immediately, then every minute. Folded into the list pipeline so
@@ -96,19 +112,29 @@ class TaskListViewModel @Inject constructor(
 
         combine(
             getTasksUseCase(),
+            tagRepository.observeTagsByTask(),
+            tagRepository.observeTags(),
             taskListPreferencesRepository.observeSortMode(),
             minuteTicker,
-        ) { tasks, sortMode, _ -> tasks to sortMode }
+        ) { tasks, tagsByTask, allTags, sortMode, _ ->
+            ListInputs(tasks, tagsByTask, allTags, sortMode)
+        }
             .onStart { _uiState.update { it.copy(isLoading = true) } }
-            .onEach { (tasks, sortMode) ->
+            .onEach { (tasks, tagsByTask, allTags, sortMode) ->
                 val now = System.currentTimeMillis()
-                val mapped = tasks.map { t -> t.toWithSubtasksUi(now) }
+                val mapped = tasks.map { t ->
+                    t.toWithSubtasksUi(now, tagsByTask[t.task.id].orEmpty())
+                }
                 val ordered = mapped.sortedByMode(sortMode)
                 val overdueCount = ordered.count { it.isDeadlineOverdue }
                 _uiState.update { state ->
+                    // Drop a tag filter that no longer points at an existing tag.
+                    val tagFilter = state.tagFilter?.takeIf { id -> allTags.any { it.id == id } }
                     state.copy(
                         allTasks = ordered,
-                        tasks = ordered.applyFilter(state.filter),
+                        tasks = ordered.applyFilter(state.filter, tagFilter),
+                        allTags = allTags,
+                        tagFilter = tagFilter,
                         sortMode = sortMode,
                         overdueCount = overdueCount,
                         isLoading = false,
@@ -120,13 +146,42 @@ class TaskListViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    /** Bundled inputs for the list pipeline (combine carries a single value). */
+    private data class ListInputs(
+        val tasks: List<dev.heckr.kitsudo.domain.model.TaskWithSubtasks>,
+        val tagsByTask: Map<String, List<Tag>>,
+        val allTags: List<Tag>,
+        val sortMode: TaskSortMode,
+    )
+
     fun setFilter(filter: TaskListFilter) {
         _uiState.update { state ->
             state.copy(
                 filter = filter,
-                tasks = state.allTasks.applyFilter(filter),
+                tasks = state.allTasks.applyFilter(filter, state.tagFilter),
             )
         }
+    }
+
+    /** Filters the list to a single tag, or clears the tag filter when null. */
+    fun setTagFilter(tagId: String?) {
+        _uiState.update { state ->
+            state.copy(
+                tagFilter = tagId,
+                tasks = state.allTasks.applyFilter(state.filter, tagId),
+            )
+        }
+    }
+
+    /** Creates a tag (or reuses an existing same-named one) and reports it back. */
+    fun createTag(name: String, color: CatppuccinAccent, onCreated: (Tag) -> Unit) {
+        viewModelScope.launch {
+            createTagUseCase(name, color).getOrNull()?.let(onCreated)
+        }
+    }
+
+    fun deleteTag(tagId: String) {
+        viewModelScope.launch { tagRepository.deleteTag(tagId) }
     }
 
     fun setSortMode(mode: TaskSortMode) {
@@ -141,10 +196,31 @@ class TaskListViewModel @Inject constructor(
         viewModelScope.launch { reorderTasksUseCase(orderedIds) }
     }
 
-    fun showAddSheet() = _uiState.update { it.copy(showAddSheet = true) }
-    fun hideAddSheet() = _uiState.update { it.copy(showAddSheet = false) }
+    fun showAddSheet() = _uiState.update {
+        it.copy(showAddSheet = true, addSheetInitialTitle = "", addSheetInitialDescription = "")
+    }
 
-    fun addTask(title: String, description: String, deadlineAt: Long?) {
+    /** Opens the Add sheet prefilled from shared text (share-to-Kitsudo). */
+    fun showAddSheetPrefilled(title: String, description: String) = _uiState.update {
+        it.copy(
+            showAddSheet = true,
+            addSheetInitialTitle = title,
+            addSheetInitialDescription = description,
+        )
+    }
+
+    fun hideAddSheet() = _uiState.update {
+        it.copy(showAddSheet = false, addSheetInitialTitle = "", addSheetInitialDescription = "")
+    }
+
+    fun addTask(
+        title: String,
+        description: String,
+        deadlineAt: Long?,
+        recurrenceUnit: RecurrenceUnit? = null,
+        recurrenceInterval: Int = 1,
+        tagIds: List<String> = emptyList(),
+    ) {
         viewModelScope.launch {
             // In custom order, new tasks go to the bottom; in smart order, sortOrder is unused.
             val bottomOrder = (_uiState.value.allTasks.maxOfOrNull { it.sortOrder } ?: -1) + 1
@@ -153,8 +229,11 @@ class TaskListViewModel @Inject constructor(
                 description = description,
                 deadlineAt = deadlineAt,
                 sortOrder = bottomOrder,
+                recurrenceUnit = recurrenceUnit,
+                recurrenceInterval = recurrenceInterval,
             )
             result.onSuccess { task ->
+                if (tagIds.isNotEmpty()) tagRepository.setTagsForTask(task.id, tagIds)
                 task.deadlineAt?.let { deadline ->
                     notificationScheduler.schedule(task.id, task.title, deadline)
                 }
@@ -163,9 +242,24 @@ class TaskListViewModel @Inject constructor(
         hideAddSheet()
     }
 
-    /** Cascades: completing/un-completing a top-level task mirrors all its subtasks. */
+    /**
+     * Cascades: completing/un-completing a top-level task mirrors all its subtasks.
+     * For a recurring task, "completing" instead rolls the deadline to the next
+     * occurrence and reschedules its notification.
+     */
     fun toggleComplete(taskId: String, isCompleted: Boolean) {
         viewModelScope.launch {
+            if (isCompleted) {
+                val advanced = advanceRecurringTaskUseCase(taskId)
+                if (advanced != null) {
+                    notificationScheduler.cancel(taskId)
+                    advanced.deadlineAt?.let { deadline ->
+                        notificationScheduler.schedule(advanced.id, advanced.title, deadline)
+                        _recurringRescheduledEvents.tryEmit(deadline)
+                    }
+                    return@launch
+                }
+            }
             cascadeCompleteUseCase(taskId, isCompleted)
             if (isCompleted) notificationScheduler.cancel(taskId)
         }
@@ -335,10 +429,19 @@ private fun List<TaskWithSubtasksUi>.fieldSorted(
     return incomplete.sortedWith(comparator) + completed.sortedWith(comparator)
 }
 
-private fun List<TaskWithSubtasksUi>.applyFilter(filter: TaskListFilter): List<TaskWithSubtasksUi> =
-    when (filter) {
+private fun List<TaskWithSubtasksUi>.applyFilter(
+    filter: TaskListFilter,
+    tagFilter: String?,
+): List<TaskWithSubtasksUi> {
+    val byStatus = when (filter) {
         TaskListFilter.ALL -> this
         TaskListFilter.ACTIVE -> filter { !it.isCompleted }
         TaskListFilter.OVERDUE -> filter { it.isDeadlineOverdue }
         TaskListFilter.COMPLETED -> filter { it.isCompleted }
     }
+    return if (tagFilter == null) {
+        byStatus
+    } else {
+        byStatus.filter { task -> task.tags.any { it.id == tagFilter } }
+    }
+}

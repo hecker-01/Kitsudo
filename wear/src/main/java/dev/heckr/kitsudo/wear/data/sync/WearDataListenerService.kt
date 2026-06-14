@@ -17,6 +17,7 @@ import dev.heckr.kitsudo.domain.model.CatppuccinAccent
 import dev.heckr.kitsudo.domain.model.M3WearColors
 import dev.heckr.kitsudo.domain.model.ThemePalette
 import dev.heckr.kitsudo.domain.repository.ThemeRepository
+import dev.heckr.kitsudo.wear.glance.GlanceUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -67,6 +68,8 @@ class WearDataListenerService : WearableListenerService() {
                     applyTheme(themeName, accentName)
                     m3Colors?.let { ep.themeRepository().setM3Colors(it) }
                 }
+                // Refresh the Tile and complications with the new data.
+                GlanceUpdater.requestUpdate(applicationContext)
             }
         }
     }

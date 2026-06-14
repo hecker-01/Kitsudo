@@ -7,8 +7,10 @@ import dagger.hilt.components.SingletonComponent
 import dev.heckr.kitsudo.data.preferences.NotificationPreferencesRepositoryImpl
 import dev.heckr.kitsudo.data.preferences.TaskListPreferencesRepositoryImpl
 import dev.heckr.kitsudo.data.preferences.ThemeRepositoryImpl
+import dev.heckr.kitsudo.data.repository.TagRepositoryImpl
 import dev.heckr.kitsudo.data.repository.TaskRepositoryImpl
 import dev.heckr.kitsudo.domain.repository.NotificationPreferencesRepository
+import dev.heckr.kitsudo.domain.repository.TagRepository
 import dev.heckr.kitsudo.domain.repository.TaskListPreferencesRepository
 import dev.heckr.kitsudo.domain.repository.TaskRepository
 import dev.heckr.kitsudo.domain.repository.ThemeRepository
@@ -21,6 +23,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindTaskRepository(impl: TaskRepositoryImpl): TaskRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindTagRepository(impl: TagRepositoryImpl): TagRepository
 
     @Binds
     @Singleton

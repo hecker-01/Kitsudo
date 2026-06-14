@@ -1,6 +1,7 @@
 package dev.heckr.kitsudo.presentation.tasks
 
 import dev.heckr.kitsudo.R
+import dev.heckr.kitsudo.domain.model.Tag
 import dev.heckr.kitsudo.domain.model.TaskSortMode
 
 enum class TaskListFilter {
@@ -30,11 +31,18 @@ data class TaskListUiState(
     /** Full sorted list - kept so filter changes don't need a DB round-trip. */
     val allTasks: List<TaskWithSubtasksUi> = emptyList(),
     val filter: TaskListFilter = TaskListFilter.ALL,
+    /** All tags, for the filter row and pickers. */
+    val allTags: List<Tag> = emptyList(),
+    /** When set, the list is filtered to tasks carrying this tag id. */
+    val tagFilter: String? = null,
     val sortMode: TaskSortMode = TaskSortMode.SMART,
     val overdueCount: Int = 0,
     val isLoading: Boolean = false,
     val error: String? = null,
     val showAddSheet: Boolean = false,
+    /** Prefill for the Add sheet (used by share-to-Kitsudo); blank otherwise. */
+    val addSheetInitialTitle: String = "",
+    val addSheetInitialDescription: String = "",
     /** True when a newer version is available - drives the badge dot on the settings icon. */
     val updateAvailable: Boolean = false,
     /** True when a deletion survived process death and the undo snackbar should be re-shown. */

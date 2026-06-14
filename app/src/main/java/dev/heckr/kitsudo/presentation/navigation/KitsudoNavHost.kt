@@ -28,6 +28,11 @@ fun KitsudoNavHost(
     startExpandSubtaskId: String? = null,
     /** Called once [startTaskId] has been navigated to, so the caller can reset state. */
     onStartTaskHandled: () -> Unit = {},
+    /** Title/description from a share, to prefill the Add-task sheet on the list. */
+    sharedTitle: String? = null,
+    sharedDescription: String? = null,
+    /** Called once the shared draft has been handed to the list, so it isn't reused. */
+    onSharedHandled: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // Deep-link from a notification tap: navigate as soon as a non-null id arrives.
@@ -57,6 +62,9 @@ fun KitsudoNavHost(
                         Screen.TaskDetail.routeFor(parentId, expandSubtaskId = subtaskId),
                     )
                 },
+                sharedTitle = sharedTitle,
+                sharedDescription = sharedDescription,
+                onSharedHandled = onSharedHandled,
             )
         }
         composable(Screen.Settings.route) {

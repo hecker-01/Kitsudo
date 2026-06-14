@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -70,6 +72,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalView
@@ -81,10 +84,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.heckr.kitsudo.R
 import dev.heckr.kitsudo.domain.model.Priority
+import dev.heckr.kitsudo.domain.model.RecurrenceUnit
 import dev.heckr.kitsudo.domain.model.SyncStatus
+import dev.heckr.kitsudo.domain.model.Tag
 import dev.heckr.kitsudo.domain.model.TaskSortMode
 import dev.heckr.kitsudo.presentation.tasks.components.AddTaskSheet
 import dev.heckr.kitsudo.presentation.tasks.components.DeadlineChip
+import dev.heckr.kitsudo.presentation.tasks.components.RecurrenceChip
+import dev.heckr.kitsudo.presentation.tasks.components.TagChip
+import dev.heckr.kitsudo.presentation.tasks.components.tagColor
 import dev.heckr.kitsudo.presentation.tasks.components.SwipeActionBox
 import dev.heckr.kitsudo.presentation.tasks.components.SwipeDirection
 import dev.heckr.kitsudo.ui.theme.KitsudoTheme
@@ -96,10 +104,21 @@ fun TaskListScreen(
     onOpenSettings: () -> Unit,
     onOpenTask: (String) -> Unit,
     onOpenSubtask: (parentId: String, subtaskId: String) -> Unit,
+    sharedTitle: String? = null,
+    sharedDescription: String? = null,
+    onSharedHandled: () -> Unit = {},
     viewModel: TaskListViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Share-to-Kitsudo: open the Add sheet prefilled from the shared text, once.
+    LaunchedEffect(sharedTitle, sharedDescription) {
+        if (sharedTitle != null) {
+            viewModel.showAddSheetPrefilled(sharedTitle, sharedDescription.orEmpty())
+            onSharedHandled()
+        }
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val deletedMessage = stringResource(R.string.task_deleted_message)
@@ -123,6 +142,20 @@ fun TaskListScreen(
     LaunchedEffect(viewModel) {
         viewModel.deleteEvents.collect { showUndoSnackbar() }
     }
+    // Confirm the next occurrence when a recurring task is rolled forward.
+    val rescheduledFormat = stringResource(R.string.recurrence_rescheduled_format)
+    LaunchedEffect(viewModel) {
+        viewModel.recurringRescheduledEvents.collect { nextDeadline ->
+            val date = java.text.SimpleDateFormat("MMM d, HH:mm", java.util.Locale.getDefault())
+                .format(java.util.Date(nextDeadline))
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(
+                message = rescheduledFormat.format(date),
+                withDismissAction = true,
+                duration = SnackbarDuration.Short,
+            )
+        }
+    }
     // A deletion that survived process death: re-offer undo on (re)launch.
     LaunchedEffect(uiState.pendingUndoRestore) {
         if (uiState.pendingUndoRestore) {
@@ -144,6 +177,9 @@ fun TaskListScreen(
         onToggleSubtaskComplete = viewModel::toggleSubtaskComplete,
         onDeleteTask = viewModel::deleteTask,
         onSetFilter = viewModel::setFilter,
+        onSetTagFilter = viewModel::setTagFilter,
+        onCreateTag = viewModel::createTag,
+        onDeleteTag = viewModel::deleteTag,
         onSetSortMode = viewModel::setSortMode,
         onReorder = viewModel::reorderTasks,
         modifier = modifier,
@@ -160,11 +196,21 @@ private fun TaskListContent(
     onOpenSubtask: (parentId: String, subtaskId: String) -> Unit,
     onShowAddSheet: () -> Unit,
     onHideAddSheet: () -> Unit,
-    onAddTask: (title: String, description: String, deadlineAt: Long?) -> Unit,
+    onAddTask: (
+        title: String,
+        description: String,
+        deadlineAt: Long?,
+        recurrenceUnit: RecurrenceUnit?,
+        recurrenceInterval: Int,
+        tagIds: List<String>,
+    ) -> Unit,
     onToggleComplete: (taskId: String, Boolean) -> Unit,
     onToggleSubtaskComplete: (subtaskId: String, Boolean) -> Unit,
     onDeleteTask: (taskId: String) -> Unit,
     onSetFilter: (TaskListFilter) -> Unit,
+    onSetTagFilter: (String?) -> Unit,
+    onCreateTag: (String, dev.heckr.kitsudo.domain.model.CatppuccinAccent, (dev.heckr.kitsudo.domain.model.Tag) -> Unit) -> Unit,
+    onDeleteTag: (String) -> Unit,
     onSetSortMode: (TaskSortMode) -> Unit,
     onReorder: (orderedIds: List<String>) -> Unit,
     modifier: Modifier = Modifier,
@@ -234,6 +280,15 @@ private fun TaskListContent(
                 )
             }
 
+            // -- Tag filter row (only when tags exist) ----------------------
+            if (uiState.allTags.isNotEmpty()) {
+                TagFilterRow(
+                    tags = uiState.allTags,
+                    selectedTagId = uiState.tagFilter,
+                    onSelect = onSetTagFilter,
+                )
+            }
+
             // -- Task list / states -----------------------------------------
             when {
                 uiState.isLoading -> LoadingIndicator(Modifier.weight(1f))
@@ -260,7 +315,15 @@ private fun TaskListContent(
     }
 
     if (uiState.showAddSheet) {
-        AddTaskSheet(onAdd = onAddTask, onDismiss = onHideAddSheet)
+        AddTaskSheet(
+            onAdd = onAddTask,
+            onDismiss = onHideAddSheet,
+            availableTags = uiState.allTags,
+            onCreateTag = onCreateTag,
+            onDeleteTag = onDeleteTag,
+            initialTitle = uiState.addSheetInitialTitle,
+            initialDescription = uiState.addSheetInitialDescription,
+        )
     }
 }
 
@@ -297,6 +360,50 @@ private fun FilterChipRow(
                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ),
+            )
+        }
+    }
+}
+
+// -- Tag filter row ---------------------------------------------------------
+
+@Composable
+private fun TagFilterRow(
+    tags: List<Tag>,
+    selectedTagId: String?,
+    onSelect: (String?) -> Unit,
+) {
+    val view = LocalView.current
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 2.dp),
+    ) {
+        tags.forEach { tag ->
+            val selected = tag.id == selectedTagId
+            val color = tagColor(tag.color)
+            FilterChip(
+                selected = selected,
+                onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    // Tapping the active tag clears the filter.
+                    onSelect(if (selected) null else tag.id)
+                },
+                label = { Text(tag.name) },
+                leadingIcon = {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(color),
+                    )
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = color.copy(alpha = 0.22f),
+                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                    selectedLeadingIconColor = color,
                 ),
             )
         }
@@ -407,6 +514,7 @@ private fun TaskList(
 
 // -- Task card --------------------------------------------------------------
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TaskCard(
     task: TaskWithSubtasksUi,
@@ -513,10 +621,10 @@ private fun TaskCard(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        if (task.deadlineAt != null || task.subtaskCount > 0) {
-                            Row(
+                        if (task.deadlineAt != null || task.subtaskCount > 0 || task.tags.isNotEmpty()) {
+                            FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
                                 modifier = Modifier.padding(top = 3.dp),
                             ) {
                                 if (task.deadlineAt != null) {
@@ -525,12 +633,19 @@ private fun TaskCard(
                                         isOverdue = task.isDeadlineOverdue,
                                     )
                                 }
+                                if (task.recurrenceUnit != null && !task.isCompleted) {
+                                    RecurrenceChip(
+                                        unit = task.recurrenceUnit,
+                                        interval = task.recurrenceInterval,
+                                    )
+                                }
                                 if (task.subtaskCount > 0) {
                                     SubtaskCountChip(
                                         completed = task.subtaskCompletedCount,
                                         total = task.subtaskCount,
                                     )
                                 }
+                                task.tags.forEach { tag -> TagChip(tag = tag) }
                             }
                         }
                     }
@@ -859,11 +974,14 @@ private fun TaskListPreview() {
             snackbarHostState = remember { SnackbarHostState() },
             onOpenSettings = {}, onOpenTask = {}, onOpenSubtask = { _, _ -> },
             onShowAddSheet = {},
-            onHideAddSheet = {}, onAddTask = { _, _, _ -> },
+            onHideAddSheet = {}, onAddTask = { _, _, _, _, _, _ -> },
             onToggleComplete = { _, _ -> },
             onToggleSubtaskComplete = { _, _ -> },
             onDeleteTask = {},
             onSetFilter = {},
+            onSetTagFilter = {},
+            onCreateTag = { _, _, _ -> },
+            onDeleteTag = {},
             onSetSortMode = {},
             onReorder = {},
         )

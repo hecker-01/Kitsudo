@@ -1,13 +1,16 @@
 package dev.heckr.kitsudo.wear.presentation.tasks
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.heckr.kitsudo.data.local.dao.TaskDao
 import dev.heckr.kitsudo.domain.model.TaskWithSubtasks
 import dev.heckr.kitsudo.domain.usecase.GetTasksUseCase
 import dev.heckr.kitsudo.wear.data.sync.TaskActionSender
+import dev.heckr.kitsudo.wear.glance.GlanceUpdater
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,6 +38,7 @@ class WearTaskListViewModel @Inject constructor(
     private val getTasksUseCase: GetTasksUseCase,
     private val taskActionSender: TaskActionSender,
     private val taskDao: TaskDao,
+    @param:ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     /**
@@ -81,6 +85,7 @@ class WearTaskListViewModel @Inject constructor(
             val entity = taskDao.getTaskById(taskId) ?: return@launch
             taskDao.updateTask(entity.copy(isCompleted = newState))
             taskActionSender.toggleComplete(taskId, newState)
+            GlanceUpdater.requestUpdate(context)
         }
     }
 

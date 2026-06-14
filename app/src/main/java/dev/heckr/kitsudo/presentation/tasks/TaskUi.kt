@@ -1,7 +1,9 @@
 package dev.heckr.kitsudo.presentation.tasks
 
 import dev.heckr.kitsudo.domain.model.Priority
+import dev.heckr.kitsudo.domain.model.RecurrenceUnit
 import dev.heckr.kitsudo.domain.model.SyncStatus
+import dev.heckr.kitsudo.domain.model.Tag
 import dev.heckr.kitsudo.domain.model.Task
 import dev.heckr.kitsudo.domain.model.TaskWithSubtasks
 
@@ -15,6 +17,8 @@ data class TaskUi(
     val isDeadlineOverdue: Boolean,
     val syncStatus: SyncStatus,
     val priority: Priority,
+    val recurrenceUnit: RecurrenceUnit? = null,
+    val recurrenceInterval: Int = 1,
 ) {
     val isHighPriority: Boolean get() = priority == Priority.HIGH
 }
@@ -32,6 +36,9 @@ data class TaskWithSubtasksUi(
     val priority: Priority,
     val createdAt: Long,
     val sortOrder: Int,
+    val recurrenceUnit: RecurrenceUnit? = null,
+    val recurrenceInterval: Int = 1,
+    val tags: List<Tag> = emptyList(),
 ) {
     val subtaskCount: Int get() = subtasks.size
     val subtaskCompletedCount: Int get() = subtasks.count { it.isCompleted }
@@ -49,9 +56,14 @@ fun Task.toUi(now: Long = System.currentTimeMillis()): TaskUi = TaskUi(
     isDeadlineOverdue = deadlineAt?.let { it < now && !isCompleted } ?: false,
     syncStatus = syncStatus,
     priority = priority,
+    recurrenceUnit = recurrenceUnit,
+    recurrenceInterval = recurrenceInterval,
 )
 
-fun TaskWithSubtasks.toWithSubtasksUi(now: Long = System.currentTimeMillis()): TaskWithSubtasksUi =
+fun TaskWithSubtasks.toWithSubtasksUi(
+    now: Long = System.currentTimeMillis(),
+    tags: List<Tag> = emptyList(),
+): TaskWithSubtasksUi =
     TaskWithSubtasksUi(
         id = task.id,
         title = task.title,
@@ -64,4 +76,7 @@ fun TaskWithSubtasks.toWithSubtasksUi(now: Long = System.currentTimeMillis()): T
         priority = task.priority,
         createdAt = task.createdAt,
         sortOrder = task.sortOrder,
+        recurrenceUnit = task.recurrenceUnit,
+        recurrenceInterval = task.recurrenceInterval,
+        tags = tags,
     )

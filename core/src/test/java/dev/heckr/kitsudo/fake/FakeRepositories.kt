@@ -4,16 +4,19 @@ import dev.heckr.kitsudo.domain.model.CatppuccinAccent
 import dev.heckr.kitsudo.domain.model.M3WearColors
 import dev.heckr.kitsudo.domain.model.NotificationPreferences
 import dev.heckr.kitsudo.domain.model.SyncStatus
+import dev.heckr.kitsudo.domain.model.Tag
 import dev.heckr.kitsudo.domain.model.Task
 import dev.heckr.kitsudo.domain.model.TaskSortMode
 import dev.heckr.kitsudo.domain.model.TaskWithSubtasks
 import dev.heckr.kitsudo.domain.model.ThemePalette
 import dev.heckr.kitsudo.domain.repository.NotificationPreferencesRepository
+import dev.heckr.kitsudo.domain.repository.TagRepository
 import dev.heckr.kitsudo.domain.repository.TaskListPreferencesRepository
 import dev.heckr.kitsudo.domain.repository.TaskRepository
 import dev.heckr.kitsudo.domain.repository.ThemeRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import java.util.UUID
 
 /** Builds a [Task] with sensible defaults for tests. */
 fun task(
@@ -96,6 +99,60 @@ class FakeTaskRepository(initial: List<Task> = emptyList()) : TaskRepository {
         store.clear()
         tasks.forEach { store[it.id] = it }
         return Result.success(Unit)
+    }
+}
+
+/** In-memory [TagRepository] backed by maps. */
+class FakeTagRepository(
+    initialTags: List<Tag> = emptyList(),
+) : TagRepository {
+    val tags = linkedMapOf<String, Tag>().apply { initialTags.forEach { put(it.id, it) } }
+    val assignments = mutableSetOf<Pair<String, String>>()
+
+    override fun observeTags(): Flow<List<Tag>> = flowOf(tags.values.toList())
+
+    override fun observeTagsByTask(): Flow<Map<String, List<Tag>>> =
+        flowOf(assignments.groupBy({ it.first }, { tags.getValue(it.second) }))
+
+    override fun observeTagsForTask(taskId: String): Flow<List<Tag>> =
+        flowOf(assignments.filter { it.first == taskId }.mapNotNull { tags[it.second] })
+
+    override suspend fun getAllTags(): List<Tag> = tags.values.toList()
+
+    override suspend fun getAllAssignments(): List<Pair<String, String>> = assignments.toList()
+
+    override suspend fun createTag(name: String, color: CatppuccinAccent): Tag {
+        val tag = Tag(UUID.randomUUID().toString(), name.trim(), color, tags.size)
+        tags[tag.id] = tag
+        return tag
+    }
+
+    override suspend fun updateTag(tag: Tag) { tags[tag.id] = tag }
+
+    override suspend fun deleteTag(id: String) {
+        tags.remove(id)
+        assignments.removeAll { it.second == id }
+    }
+
+    override suspend fun setTagAssigned(taskId: String, tagId: String, assigned: Boolean) {
+        if (assigned) assignments.add(taskId to tagId) else assignments.remove(taskId to tagId)
+    }
+
+    override suspend fun setTagsForTask(taskId: String, tagIds: List<String>) {
+        tagIds.forEach { assignments.add(taskId to it) }
+    }
+
+    override suspend fun upsertTagsAndAssignments(
+        tags: List<Tag>,
+        assignments: List<Pair<String, String>>,
+    ) {
+        tags.forEach { this.tags[it.id] = it }
+        this.assignments.addAll(assignments)
+    }
+
+    override suspend fun clearAll() {
+        tags.clear()
+        assignments.clear()
     }
 }
 

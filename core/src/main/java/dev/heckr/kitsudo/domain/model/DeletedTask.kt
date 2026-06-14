@@ -7,4 +7,6 @@ package dev.heckr.kitsudo.domain.model
 data class DeletedTask(
     val task: Task,
     val subtasks: List<Task>,
+    /** Ids of tags that were assigned to [task], so undo can re-attach them. */
+    val tagIds: List<String> = emptyList(),
 )

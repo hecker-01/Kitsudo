@@ -3,9 +3,11 @@ package dev.heckr.kitsudo.domain.usecase
 import dev.heckr.kitsudo.data.backup.BackupFile
 import dev.heckr.kitsudo.data.backup.BackupSettings
 import dev.heckr.kitsudo.domain.model.CatppuccinAccent
+import dev.heckr.kitsudo.domain.model.Tag
 import dev.heckr.kitsudo.domain.model.TaskSortMode
 import dev.heckr.kitsudo.domain.model.ThemePalette
 import dev.heckr.kitsudo.domain.repository.NotificationPreferencesRepository
+import dev.heckr.kitsudo.domain.repository.TagRepository
 import dev.heckr.kitsudo.domain.repository.TaskListPreferencesRepository
 import dev.heckr.kitsudo.domain.repository.TaskRepository
 import dev.heckr.kitsudo.domain.repository.ThemeRepository
@@ -15,6 +17,7 @@ import javax.inject.Inject
 /** Restores tasks and settings from a [BackupFile] JSON string, merging or replacing. */
 class ImportTasksUseCase @Inject constructor(
     private val repository: TaskRepository,
+    private val tagRepository: TagRepository,
     private val themeRepository: ThemeRepository,
     private val notificationPreferences: NotificationPreferencesRepository,
     private val taskListPreferences: TaskListPreferencesRepository,
@@ -52,7 +55,20 @@ class ImportTasksUseCase @Inject constructor(
             val tasks = backup.tasks.map { it.toDomain() }
             when (mode) {
                 Mode.MERGE -> repository.insertTasks(tasks).getOrThrow()
-                Mode.REPLACE -> repository.replaceAllTasks(tasks).getOrThrow()
+                Mode.REPLACE -> {
+                    repository.replaceAllTasks(tasks).getOrThrow()
+                    // Replacing tasks drops their old tag assignments; start clean.
+                    tagRepository.clearAll()
+                }
+            }
+            // Restore tags and assignments. Assignments reference task ids that the
+            // import just (re)created, so do this after the tasks are in place.
+            val tags = backup.tags.map {
+                Tag(it.id, it.name, CatppuccinAccent.fromName(it.color), it.sortOrder)
+            }
+            val assignments = backup.taskTags.map { it.taskId to it.tagId }
+            if (tags.isNotEmpty() || assignments.isNotEmpty()) {
+                tagRepository.upsertTagsAndAssignments(tags, assignments)
             }
             importedCount = tasks.size
         }

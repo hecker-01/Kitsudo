@@ -8,6 +8,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.heckr.kitsudo.data.local.KitsudoDatabase
+import dev.heckr.kitsudo.data.local.dao.TagDao
 import dev.heckr.kitsudo.data.local.dao.TaskDao
 import javax.inject.Singleton
 
@@ -25,4 +26,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideTaskDao(db: KitsudoDatabase): TaskDao = db.taskDao()
+
+    @Provides
+    @Singleton
+    fun provideTagDao(db: KitsudoDatabase): TagDao = db.tagDao()
 }

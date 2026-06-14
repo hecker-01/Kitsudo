@@ -5,6 +5,7 @@ import dev.heckr.kitsudo.domain.model.NotificationPreferences
 import dev.heckr.kitsudo.domain.model.TaskSortMode
 import dev.heckr.kitsudo.domain.model.ThemePalette
 import dev.heckr.kitsudo.fake.FakeNotificationPreferencesRepository
+import dev.heckr.kitsudo.fake.FakeTagRepository
 import dev.heckr.kitsudo.fake.FakeTaskListPreferencesRepository
 import dev.heckr.kitsudo.fake.FakeTaskRepository
 import dev.heckr.kitsudo.fake.FakeThemeRepository
@@ -27,14 +28,16 @@ class BackupRoundTripTest {
         theme: FakeThemeRepository,
         notif: FakeNotificationPreferencesRepository,
         sort: FakeTaskListPreferencesRepository,
-    ) = ExportTasksUseCase(tasks, theme, notif, sort)
+        tags: FakeTagRepository = FakeTagRepository(),
+    ) = ExportTasksUseCase(tasks, tags, theme, notif, sort)
 
     private fun importer(
         tasks: FakeTaskRepository,
         theme: FakeThemeRepository,
         notif: FakeNotificationPreferencesRepository,
         sort: FakeTaskListPreferencesRepository,
-    ) = ImportTasksUseCase(tasks, theme, notif, sort)
+        tags: FakeTagRepository = FakeTagRepository(),
+    ) = ImportTasksUseCase(tasks, tags, theme, notif, sort)
 
     @Test
     fun `export then import restores tasks and settings`() = runTest {
@@ -114,6 +117,30 @@ class BackupRoundTripTest {
         assertEquals(setOf("current"), tasks.store.keys) // unchanged
         assertEquals(ThemePalette.FRAPPE, theme.palette)
         assertEquals(TaskSortMode.NEWEST, sort.mode)
+    }
+
+    @Test
+    fun `export then import restores tags and assignments`() = runTest {
+        val sourceTags = FakeTagRepository().apply {
+            val work = createTag("Work", CatppuccinAccent.BLUE)
+            assignments.add("p" to work.id)
+        }
+        val json = exporter(
+            FakeTaskRepository(sourceTasks),
+            FakeThemeRepository(), FakeNotificationPreferencesRepository(),
+            FakeTaskListPreferencesRepository(), sourceTags,
+        ).invoke()
+
+        val tasks = FakeTaskRepository()
+        val tags = FakeTagRepository()
+        importer(
+            tasks, FakeThemeRepository(), FakeNotificationPreferencesRepository(),
+            FakeTaskListPreferencesRepository(), tags,
+        ).invoke(json, importTasks = true, importSettings = false, mode = ImportTasksUseCase.Mode.REPLACE)
+
+        assertEquals(1, tags.tags.size)
+        assertEquals("Work", tags.tags.values.single().name)
+        assertEquals(setOf("p" to tags.tags.keys.single()), tags.assignments)
     }
 
     @Test

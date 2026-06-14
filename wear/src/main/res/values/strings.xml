@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Kitsudo</string>
+
+    <!-- Tile -->
+    <string name="tile_label">Kitsudo tasks</string>
+    <string name="tile_all_clear">All clear</string>
+    <string name="tile_no_deadlines">No deadlines</string>
+    <string name="tile_overdue">Overdue</string>
+    <string name="tile_today_format">Today %s</string>
+    <string name="tile_tomorrow">Tomorrow</string>
+    <string name="tile_due_format">%d due today</string>
+    <string name="tile_active_format">%d active</string>
+
+    <!-- Complication -->
+    <string name="complication_label">Tasks due</string>
+    <string name="complication_due_label">due</string>
+    <string name="complication_content_description">%d tasks due today</string>
 </resources>

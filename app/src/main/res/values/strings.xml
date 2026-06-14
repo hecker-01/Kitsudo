@@ -56,6 +56,49 @@
     <string name="task_deadline_change">Change deadline</string>
     <string name="task_deadline_clear">Clear</string>
 
+    <!-- Task recurrence -->
+    <string name="recurrence_label">Repeat</string>
+    <string name="recurrence_none">Does not repeat</string>
+    <string name="recurrence_daily">Daily</string>
+    <string name="recurrence_weekly">Weekly</string>
+    <string name="recurrence_monthly">Monthly</string>
+    <string name="recurrence_custom">Custom</string>
+    <string name="recurrence_set">Repeat</string>
+    <string name="recurrence_change">Change repeat</string>
+    <string name="recurrence_clear">Don\'t repeat</string>
+    <string name="recurrence_requires_deadline">Set a deadline to repeat</string>
+    <string name="recurrence_every_label">Every</string>
+    <string name="recurrence_unit_days">Days</string>
+    <string name="recurrence_unit_weeks">Weeks</string>
+    <string name="recurrence_unit_months">Months</string>
+    <string name="recurrence_interval_increase">Increase interval</string>
+    <string name="recurrence_interval_decrease">Decrease interval</string>
+    <string name="recurrence_rescheduled_format">Repeats, next on %s</string>
+    <plurals name="recurrence_every_days">
+        <item quantity="one">Every day</item>
+        <item quantity="other">Every %d days</item>
+    </plurals>
+    <plurals name="recurrence_every_weeks">
+        <item quantity="one">Every week</item>
+        <item quantity="other">Every %d weeks</item>
+    </plurals>
+    <plurals name="recurrence_every_months">
+        <item quantity="one">Every month</item>
+        <item quantity="other">Every %d months</item>
+    </plurals>
+
+    <!-- Task tags -->
+    <string name="tags_label">Tags</string>
+    <string name="tags_set">Tags</string>
+    <string name="tags_done">Done</string>
+    <string name="tags_assigned">Assigned</string>
+    <string name="tags_delete">Delete tag</string>
+    <string name="tags_empty_hint">No tags yet. Create one below.</string>
+    <string name="tags_new_label">New tag</string>
+    <string name="tags_new_hint">Tag name…</string>
+    <string name="tags_new_add">Add tag</string>
+    <string name="tags_filter_all">All tags</string>
+
     <!-- Task subtasks -->
     <string name="task_subtasks_label">Subtasks</string>
     <string name="task_subtasks_label_count">Subtasks (%1$d / %2$d)</string>

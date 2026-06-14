@@ -19,4 +19,8 @@ data class TaskEntity(
     val sortOrder: Int,
     /** 0 = NORMAL, 1 = HIGH. Maps to Priority enum via Priority.fromDb(). */
     val priority: Int = 0,
+    /** RecurrenceUnit name (DAY/WEEK/MONTH), or null for a non-recurring task. */
+    val recurrenceUnit: String? = null,
+    /** Periods between occurrences; only meaningful when recurrenceUnit is set. */
+    val recurrenceInterval: Int = 1,
 )

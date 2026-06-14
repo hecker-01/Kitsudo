@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +22,7 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,8 +59,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.heckr.kitsudo.R
+import dev.heckr.kitsudo.domain.model.RecurrenceUnit
 import dev.heckr.kitsudo.presentation.tasks.components.DeadlineChip
 import dev.heckr.kitsudo.presentation.tasks.components.DeadlinePicker
+import dev.heckr.kitsudo.presentation.tasks.components.RecurrenceChip
+import dev.heckr.kitsudo.presentation.tasks.components.RecurrencePicker
+import dev.heckr.kitsudo.presentation.tasks.components.TagChip
+import dev.heckr.kitsudo.presentation.tasks.components.TagPickerSheet
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -85,11 +93,17 @@ fun TaskDetailScreen(
     TaskDetailContent(
         task = task,
         subtasks = uiState.subtasks,
+        tags = uiState.tags,
+        allTags = uiState.allTags,
         expandSubtaskId = viewModel.expandSubtaskId,
         onBack = onBack,
         onTitleChange = viewModel::saveTitle,
         onDescriptionChange = viewModel::saveDescription,
         onSetDeadline = viewModel::setDeadline,
+        onSetRecurrence = viewModel::setRecurrence,
+        onToggleTag = viewModel::toggleTag,
+        onCreateTag = viewModel::createAndAssignTag,
+        onDeleteTag = viewModel::deleteTag,
         onToggleComplete = viewModel::toggleComplete,
         onTogglePriority = viewModel::togglePriority,
         onAddSubtask = viewModel::addSubtask,
@@ -103,16 +117,22 @@ fun TaskDetailScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun TaskDetailContent(
     task: TaskUi,
     subtasks: List<TaskUi>,
+    tags: List<dev.heckr.kitsudo.domain.model.Tag>,
+    allTags: List<dev.heckr.kitsudo.domain.model.Tag>,
     expandSubtaskId: String?,
     onBack: () -> Unit,
     onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onSetDeadline: (Long?) -> Unit,
+    onSetRecurrence: (RecurrenceUnit?, Int) -> Unit,
+    onToggleTag: (String) -> Unit,
+    onCreateTag: (String, dev.heckr.kitsudo.domain.model.CatppuccinAccent) -> Unit,
+    onDeleteTag: (String) -> Unit,
     onToggleComplete: (Boolean) -> Unit,
     onTogglePriority: () -> Unit,
     onAddSubtask: (String) -> Unit,
@@ -129,6 +149,8 @@ private fun TaskDetailContent(
     var titleField by rememberSaveable(task.id) { mutableStateOf(task.title) }
     var descriptionField by rememberSaveable(task.id) { mutableStateOf(task.description) }
     var showDeadlinePicker by rememberSaveable { mutableStateOf(false) }
+    var showRecurrencePicker by rememberSaveable { mutableStateOf(false) }
+    var showTagPicker by rememberSaveable { mutableStateOf(false) }
     var newSubtaskTitle by rememberSaveable { mutableStateOf("") }
     val view = LocalView.current
 
@@ -305,6 +327,69 @@ private fun TaskDetailContent(
                             }
                         }
                     }
+
+                    // -- Repeat (only meaningful with a deadline) -----------
+                    if (task.deadlineAt != null) {
+                        Spacer(Modifier.height(14.dp))
+                        SectionTitle(stringResource(R.string.recurrence_label))
+                        Spacer(Modifier.height(8.dp))
+                        if (task.recurrenceUnit != null) {
+                            RecurrenceChip(
+                                unit = task.recurrenceUnit,
+                                interval = task.recurrenceInterval,
+                            )
+                            Spacer(Modifier.height(8.dp))
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilledTonalButton(
+                                onClick = { showRecurrencePicker = true },
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                ),
+                            ) {
+                                Icon(Icons.Filled.Refresh, contentDescription = null)
+                                Text(
+                                    text = stringResource(
+                                        if (task.recurrenceUnit != null) R.string.recurrence_change
+                                        else R.string.recurrence_set,
+                                    ),
+                                    modifier = Modifier.padding(start = 6.dp),
+                                )
+                            }
+                            if (task.recurrenceUnit != null) {
+                                OutlinedButton(onClick = { onSetRecurrence(null, 1) }) {
+                                    Text(stringResource(R.string.recurrence_clear))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // -- Tags ---------------------------------------------------
+            SectionCard {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    SectionTitle(stringResource(R.string.tags_label))
+                    Spacer(Modifier.height(10.dp))
+                    if (tags.isNotEmpty()) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            tags.forEach { tag -> TagChip(tag = tag) }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                    }
+                    FilledTonalButton(
+                        onClick = { showTagPicker = true },
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
+                    ) {
+                        Text(text = stringResource(R.string.tags_set))
+                    }
                 }
             }
 
@@ -388,6 +473,29 @@ private fun TaskDetailContent(
                 showDeadlinePicker = false
             },
             onDismiss = { showDeadlinePicker = false },
+        )
+    }
+
+    if (showRecurrencePicker) {
+        RecurrencePicker(
+            initialUnit = task.recurrenceUnit,
+            initialInterval = task.recurrenceInterval,
+            onConfirm = { unit, interval ->
+                onSetRecurrence(unit, interval)
+                showRecurrencePicker = false
+            },
+            onDismiss = { showRecurrencePicker = false },
+        )
+    }
+
+    if (showTagPicker) {
+        TagPickerSheet(
+            allTags = allTags,
+            selectedTagIds = tags.map { it.id }.toSet(),
+            onToggle = onToggleTag,
+            onCreate = onCreateTag,
+            onDelete = onDeleteTag,
+            onDismiss = { showTagPicker = false },
         )
     }
 }
