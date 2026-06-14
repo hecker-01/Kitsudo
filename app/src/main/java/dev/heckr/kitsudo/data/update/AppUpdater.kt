@@ -13,6 +13,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -55,50 +56,53 @@ class AppUpdater @Inject constructor() {
     private var pendingInstallFile: File? = null
     private var downloadJob: Job? = null
 
-    private val checkerListener: () -> Unit = {
-        UpdateChecker.removeListener(checkerListener)
-        _status.value = when {
-            UpdateChecker.updateAvailable ->
-                Status.Available(UpdateChecker.latestVersion ?: "")
-            UpdateChecker.lastCheckError != null ->
-                Status.Error(UpdateChecker.lastCheckError ?: "")
-            else -> Status.UpToDate
-        }
-    }
+    /** App-lifetime scope for the check + download (this is an app-scoped @Singleton). */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private var syncListenerRegistered = false
+    /** The newest release found by the last successful check, if any. */
+    private var available: UpdateChecker.UpdateInfo? = null
+
+    /** The pending update's details (version/notes/size), for the confirm dialog. */
+    val availableUpdate: UpdateChecker.UpdateInfo?
+        get() = available
+
+    /** Guards against firing more than one silent background check per process. */
+    private var silentCheckStarted = false
 
     /**
-     * Persistent listener that keeps [_status] in sync with the background check
-     * kicked off at app launch. Without this, a check that completes *after* the
-     * ViewModel reads state (the common case at boot) would never surface the
-     * "update available" badge until the user manually opened Settings.
+     * Kicks off a release check and reflects the outcome in [status].
+     *
+     * [silent] (the app-launch background check) only surfaces an available
+     * update - it never shows "up to date"/error unsolicited, and runs at most
+     * once per process. A non-silent check (user tapped the update card) shows
+     * the full Checking -> UpToDate/Error/Available flow.
      */
-    private val syncListener: () -> Unit = {
-        // Never clobber an active download/install/check flow.
-        when (_status.value) {
-            is Status.Checking, is Status.Downloading, is Status.Installing -> Unit
-            else -> reconcileStatus()
+    fun checkForUpdates(context: Context, silent: Boolean = true) {
+        // Play Store builds update through Google Play; never self-check.
+        if (BuildConfig.PLAY_STORE_BUILD || isInstalledFromPlayStore(context)) return
+        when (status.value) {
+            is Status.Checking, is Status.Downloading, is Status.Installing, is Status.Available -> return
+            else -> Unit
         }
-    }
+        if (silent && silentCheckStarted) return
+        if (silent) silentCheckStarted = true else _status.value = Status.Checking
 
-    private fun reconcileStatus() {
-        _status.value = when {
-            UpdateChecker.updateAvailable ->
-                Status.Available(UpdateChecker.latestVersion ?: "")
-            UpdateChecker.lastCheckError != null ->
-                Status.Error(UpdateChecker.lastCheckError ?: "")
-            else -> Status.Idle
-        }
-    }
+        val currentVersion = runCatching {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        }.getOrNull() ?: "0"
 
-    /** Call from ViewModel.init - syncs state with whatever UpdateChecker already knows. */
-    fun syncFromChecker() {
-        if (!syncListenerRegistered) {
-            UpdateChecker.addListener(syncListener)
-            syncListenerRegistered = true
+        scope.launch {
+            when (val result = UpdateChecker.check(currentVersion)) {
+                is UpdateChecker.Result.Available -> {
+                    available = result.info
+                    _status.value = Status.Available(result.info.version)
+                }
+                is UpdateChecker.Result.UpToDate ->
+                    _status.value = if (silent) Status.Idle else Status.UpToDate
+                is UpdateChecker.Result.Error ->
+                    _status.value = if (silent) Status.Idle else Status.Error(result.message)
+            }
         }
-        reconcileStatus()
     }
 
     /** True when the app was installed from the Google Play Store. */
@@ -136,9 +140,7 @@ class AppUpdater @Inject constructor() {
             is Status.Available -> true
             is Status.Downloading, is Status.Installing -> false
             else -> {
-                _status.value = Status.Checking
-                UpdateChecker.addListener(checkerListener)
-                UpdateChecker.check(context)
+                checkForUpdates(context, silent = false)
                 false
             }
         }
@@ -146,14 +148,13 @@ class AppUpdater @Inject constructor() {
 
     /** Call after the user confirms the update dialog. */
     fun startDownload(context: Context) {
-        val url = UpdateChecker.latestApkUrl
-        val version = UpdateChecker.latestVersion
-        if (url == null || version == null) {
+        val info = available
+        if (info == null) {
             _status.value = Status.Error("Update info missing")
             return
         }
         _status.value = Status.Downloading(-1)
-        downloadApk(context, url, version)
+        downloadApk(context, info.apkUrl, info.version)
     }
 
     /** Call from the ActivityResultCallback for MANAGE_UNKNOWN_APP_SOURCES. */
@@ -171,9 +172,8 @@ class AppUpdater @Inject constructor() {
 
     fun cancel() {
         downloadJob?.cancel()
-        UpdateChecker.removeListener(checkerListener)
         if (_status.value is Status.Downloading) {
-            _status.value = Status.Available(UpdateChecker.latestVersion ?: "")
+            _status.value = Status.Available(available?.version ?: "")
         }
     }
 
@@ -185,7 +185,7 @@ class AppUpdater @Inject constructor() {
         val outFile = File(dir, "kitsudo-$version.apk")
 
         // Skip download if file already exists with matching size
-        val expectedSize = UpdateChecker.apkSizeBytes
+        val expectedSize = available?.apkSizeBytes ?: 0L
         if (outFile.exists() && expectedSize > 0L && outFile.length() == expectedSize) {
             _status.value = Status.Installing
             installApk(context, outFile)
@@ -193,7 +193,7 @@ class AppUpdater @Inject constructor() {
         }
 
         downloadJob?.cancel()
-        downloadJob = CoroutineScope(Dispatchers.IO).launch {
+        downloadJob = scope.launch {
             var conn: HttpURLConnection? = null
             var success = false
             try {

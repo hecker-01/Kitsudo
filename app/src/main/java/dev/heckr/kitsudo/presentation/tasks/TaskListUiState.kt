@@ -37,4 +37,6 @@ data class TaskListUiState(
     val showAddSheet: Boolean = false,
     /** True when a newer version is available - drives the badge dot on the settings icon. */
     val updateAvailable: Boolean = false,
+    /** True when a deletion survived process death and the undo snackbar should be re-shown. */
+    val pendingUndoRestore: Boolean = false,
 )

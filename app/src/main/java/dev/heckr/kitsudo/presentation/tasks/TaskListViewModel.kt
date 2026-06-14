@@ -1,9 +1,11 @@
 package dev.heckr.kitsudo.presentation.tasks
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.heckr.kitsudo.data.notification.NotificationScheduler
+import dev.heckr.kitsudo.data.sync.TaskDto
 import dev.heckr.kitsudo.data.update.AppUpdater
 import dev.heckr.kitsudo.domain.model.DeletedTask
 import dev.heckr.kitsudo.domain.model.TaskSortMode
@@ -15,6 +17,8 @@ import dev.heckr.kitsudo.domain.usecase.GetTasksUseCase
 import dev.heckr.kitsudo.domain.usecase.ReorderTasksUseCase
 import dev.heckr.kitsudo.domain.usecase.RestoreTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.UpdateTaskUseCase
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -23,11 +27,14 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 
 @HiltViewModel
@@ -42,17 +49,38 @@ class TaskListViewModel @Inject constructor(
     private val taskListPreferencesRepository: TaskListPreferencesRepository,
     private val notificationScheduler: NotificationScheduler,
     private val appUpdater: AppUpdater,
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TaskListUiState())
     val uiState: StateFlow<TaskListUiState> = _uiState.asStateFlow()
 
-    /** Snapshot of the most recent deletion, kept until the undo window closes. */
-    private var pendingDelete: DeletedTask? = null
+    /**
+     * Snapshot of the most recent deletion, kept until the undo window closes.
+     * Persisted in [SavedStateHandle] (as JSON) so a process death during the
+     * undo window doesn't lose the ability to restore the task.
+     */
+    private var pendingDelete: DeletedTask?
+        get() = savedStateHandle.get<String>(KEY_PENDING_DELETE)?.let(::decodeDeletedTask)
+        set(value) {
+            savedStateHandle[KEY_PENDING_DELETE] = value?.let(::encodeDeletedTask)
+        }
 
     /** Emits whenever a task is deleted, so the UI can offer an undo snackbar. */
     private val _deleteEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val deleteEvents: SharedFlow<Unit> = _deleteEvents.asSharedFlow()
+
+    /**
+     * Ticks once immediately, then every minute. Folded into the list pipeline so
+     * overdue state and the smart-sort buckets re-evaluate as deadlines pass, even
+     * when the database itself hasn't changed.
+     */
+    private val minuteTicker: Flow<Unit> = flow {
+        while (true) {
+            emit(Unit)
+            delay(TICK_INTERVAL_MS)
+        }
+    }
 
     init {
         appUpdater.status
@@ -61,12 +89,16 @@ class TaskListViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        appUpdater.syncFromChecker()
+        // A pending delete that survived process death: re-offer undo on launch.
+        if (pendingDelete != null) {
+            _uiState.update { it.copy(pendingUndoRestore = true) }
+        }
 
         combine(
             getTasksUseCase(),
             taskListPreferencesRepository.observeSortMode(),
-        ) { tasks, sortMode -> tasks to sortMode }
+            minuteTicker,
+        ) { tasks, sortMode, _ -> tasks to sortMode }
             .onStart { _uiState.update { it.copy(isLoading = true) } }
             .onEach { (tasks, sortMode) ->
                 val now = System.currentTimeMillis()
@@ -167,6 +199,16 @@ class TaskListViewModel @Inject constructor(
         }
     }
 
+    /** Called when the undo snackbar is dismissed/times out without an undo: drop the snapshot. */
+    fun onUndoWindowClosed() {
+        pendingDelete = null
+    }
+
+    /** Marks the restored undo prompt as handled so it isn't shown again this composition. */
+    fun consumePendingUndoRestore() {
+        _uiState.update { it.copy(pendingUndoRestore = false) }
+    }
+
     /** Reschedules deadline notifications for a restored task and its incomplete subtasks. */
     private suspend fun rescheduleNotifications(deleted: DeletedTask) {
         val task = deleted.task
@@ -187,7 +229,36 @@ class TaskListViewModel @Inject constructor(
             }
         }
     }
+
+    // -- Pending-delete persistence --------------------------------------------
+
+    private fun encodeDeletedTask(deleted: DeletedTask): String =
+        Json.encodeToString(
+            DeletedTaskState(
+                task = TaskDto.fromDomain(deleted.task),
+                subtasks = deleted.subtasks.map(TaskDto::fromDomain),
+            ),
+        )
+
+    private fun decodeDeletedTask(json: String): DeletedTask? = try {
+        val state = Json.decodeFromString<DeletedTaskState>(json)
+        DeletedTask(state.task.toDomain(), state.subtasks.map { it.toDomain() })
+    } catch (_: Exception) {
+        null
+    }
+
+    private companion object {
+        const val TICK_INTERVAL_MS = 60_000L
+        const val KEY_PENDING_DELETE = "pending_delete"
+    }
 }
+
+/** Serializable form of [DeletedTask] for [SavedStateHandle] persistence. */
+@Serializable
+private data class DeletedTaskState(
+    val task: TaskDto,
+    val subtasks: List<TaskDto>,
+)
 
 // -- Smart sort -------------------------------------------------------------
 
@@ -219,8 +290,8 @@ private fun List<TaskWithSubtasksUi>.smartSorted(): List<TaskWithSubtasksUi> {
     return overdue + upcoming + noDeadline + completed
 }
 
-/** Dispatches to the ordering for [mode]. */
-private fun List<TaskWithSubtasksUi>.sortedByMode(mode: TaskSortMode): List<TaskWithSubtasksUi> =
+/** Dispatches to the ordering for [mode]. Visible for testing. */
+internal fun List<TaskWithSubtasksUi>.sortedByMode(mode: TaskSortMode): List<TaskWithSubtasksUi> =
     when (mode) {
         TaskSortMode.SMART -> smartSorted()
         TaskSortMode.CUSTOM -> customSorted()

@@ -29,12 +29,30 @@ class TaskRepositoryImpl @Inject constructor(
     override fun observeTask(id: String): Flow<Task?> =
         taskDao.observeTaskById(id).map { it?.toDomain() }
 
+    override suspend fun getAllTasks(): List<Task> =
+        taskDao.getAllOnce().map { it.toDomain() }
+
+    override suspend fun insertTasks(tasks: List<Task>): Result<Unit> = runCatching {
+        taskDao.insertAll(tasks.map { it.toEntity() })
+    }
+
+    override suspend fun replaceAllTasks(tasks: List<Task>): Result<Unit> = runCatching {
+        taskDao.replaceAll(tasks.map { it.toEntity() })
+    }
+
     override suspend fun createTask(task: Task): Result<Unit> = runCatching {
         taskDao.insertTask(task.toEntity())
     }
 
     override suspend fun updateTask(task: Task): Result<Unit> = runCatching {
         taskDao.updateTask(task.toEntity())
+    }
+
+    override suspend fun setCompletedForTaskAndSubtasks(
+        id: String,
+        isCompleted: Boolean,
+    ): Result<Unit> = runCatching {
+        taskDao.setCompletedForTaskAndSubtasks(id, isCompleted)
     }
 
     override suspend fun deleteTask(id: String): Result<Unit> = runCatching {

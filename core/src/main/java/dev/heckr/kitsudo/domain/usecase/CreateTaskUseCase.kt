@@ -17,6 +17,19 @@ class CreateTaskUseCase @Inject constructor(
         deadlineAt: Long? = null,
         sortOrder: Int = 0,
     ): Result<Task> {
+        // Enforce the 2-level depth limit at the data layer (not just in the UI):
+        // a subtask's parent must itself be a top-level task.
+        if (parentId != null) {
+            val parent = repository.getTaskById(parentId)
+                ?: return Result.failure(
+                    IllegalArgumentException("Parent task $parentId not found"),
+                )
+            if (parent.parentId != null) {
+                return Result.failure(
+                    IllegalStateException("Subtasks cannot be nested more than one level deep"),
+                )
+            }
+        }
         val task = Task(
             id = UUID.randomUUID().toString(),
             title = title.trim(),

@@ -76,8 +76,8 @@ class WearDataListenerService : WearableListenerService() {
             val dtoList: List<TaskDto> = Json.decodeFromString(json)
             Log.d(TAG, "applySnapshot: decoded ${dtoList.size} DTOs")
             val entities = dtoList.map { it.toDomain().toEntity() }
-            ep.taskDao().deleteAll()
-            ep.taskDao().insertAll(entities)
+            // Atomic swap: a kill between clear and insert can't empty the watch DB.
+            ep.taskDao().replaceAll(entities)
         } catch (e: Exception) {
             Log.e(TAG, "applySnapshot failed", e)
         }

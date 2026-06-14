@@ -161,7 +161,37 @@
     <string name="settings_section_updates">Updates</string>
     <string name="settings_section_about">About</string>
 
+    <!-- Settings - backup &amp; restore -->
+    <string name="settings_section_backup">Backup &amp; restore</string>
+    <string name="settings_backup_subtitle">Save your tasks and settings to a file, or restore them from one</string>
+    <string name="settings_backup_export">Export data</string>
+    <string name="settings_backup_import">Import data</string>
+    <string name="settings_backup_import_title">Import tasks</string>
+    <string name="settings_backup_import_message">Choose what to import from the backup.</string>
+    <string name="settings_backup_import_tasks">Tasks</string>
+    <string name="settings_backup_import_settings">Settings</string>
+    <string name="settings_backup_import_confirm">Import</string>
+    <string name="settings_backup_import_merge">Merge</string>
+    <string name="settings_backup_import_replace">Replace</string>
+    <string name="settings_backup_cancel">Cancel</string>
+    <string name="settings_backup_export_success">Tasks exported</string>
+    <string name="settings_backup_export_failed">Export failed</string>
+    <string name="settings_backup_import_success">Tasks imported</string>
+    <string name="settings_backup_import_failed">Import failed: invalid backup file</string>
+
     <!-- Settings - notifications -->
+    <string name="settings_notif_perm_title">Notifications are off</string>
+    <string
+        name="settings_notif_perm_subtitle"
+    >Turn on notifications so deadline reminders can appear</string>
+    <string name="settings_notif_perm_action">Enable</string>
+
+    <string name="settings_notif_exact_title">Exact deadline alarms</string>
+    <string
+        name="settings_notif_exact_subtitle"
+    >Allow exact alarms so at-deadline reminders fire on time, even in battery saver</string>
+    <string name="settings_notif_exact_action">Allow</string>
+
     <string name="settings_notif_lead_title">Pre-deadline reminders</string>
     <string
         name="settings_notif_lead_subtitle"

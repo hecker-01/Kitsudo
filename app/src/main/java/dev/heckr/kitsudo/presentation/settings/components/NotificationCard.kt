@@ -1,5 +1,10 @@
 package dev.heckr.kitsudo.presentation.settings.components
 
+import android.app.AlarmManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
@@ -11,16 +16,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,10 +37,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.heckr.kitsudo.R
 import dev.heckr.kitsudo.domain.model.NotificationPreferences
 import dev.heckr.kitsudo.presentation.tasks.components.TimeWheelPicker
@@ -61,6 +75,10 @@ fun NotificationCard(
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // -- Permission prompts (each only shows when its grant is missing) --
+            NotificationsEnabledPrompt()
+            ExactAlarmPrompt()
+
             // -- Pre-reminder lead time (multi-select) ------------------
             SubSectionLabel(stringResource(R.string.settings_notif_lead_title))
             Subtitle(stringResource(R.string.settings_notif_lead_subtitle))
@@ -97,6 +115,115 @@ fun NotificationCard(
         }
     }
 }
+
+// -- Permission prompts -----------------------------------------------------
+
+/**
+ * Shown only when notifications are disabled for the app (permission denied or
+ * turned off at the app/channel level). Tapping "Enable" opens the app's system
+ * notification settings; the state re-checks on resume so the prompt disappears
+ * once the user returns having enabled them.
+ */
+@Composable
+private fun NotificationsEnabledPrompt() {
+    val context = LocalContext.current
+    val enabled = rememberPermissionState { context.areNotificationsEnabled() }
+
+    PermissionPrompt(
+        visible = !enabled,
+        title = stringResource(R.string.settings_notif_perm_title),
+        subtitle = stringResource(R.string.settings_notif_perm_subtitle),
+        actionLabel = stringResource(R.string.settings_notif_perm_action),
+        onAction = {
+            context.startActivity(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+            )
+        },
+    )
+}
+
+/**
+ * Shown only when the OS hasn't granted exact-alarm permission. Tapping "Allow"
+ * opens the system screen for it; the state re-checks on resume so the prompt
+ * disappears once the user returns having granted it.
+ */
+@Composable
+private fun ExactAlarmPrompt() {
+    val context = LocalContext.current
+    val canSchedule = rememberPermissionState { context.canScheduleExactAlarms() }
+
+    PermissionPrompt(
+        visible = !canSchedule,
+        title = stringResource(R.string.settings_notif_exact_title),
+        subtitle = stringResource(R.string.settings_notif_exact_subtitle),
+        actionLabel = stringResource(R.string.settings_notif_exact_action),
+        onAction = {
+            context.startActivity(
+                Intent(
+                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                    Uri.fromParts("package", context.packageName, null),
+                ),
+            )
+        },
+    )
+}
+
+/** Label + subtitle on the left, an accent-colored action button on the right. */
+@Composable
+private fun PermissionPrompt(
+    visible: Boolean,
+    title: String,
+    subtitle: String,
+    actionLabel: String,
+    onAction: () -> Unit,
+) {
+    AnimatedVisibility(visible = visible) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    SubSectionLabel(title)
+                    Subtitle(subtitle)
+                }
+                Spacer(Modifier.width(12.dp))
+                FilledTonalButton(
+                    onClick = onAction,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        // Label tracks the user's accent color (drives colorScheme.primary).
+                        contentColor = MaterialTheme.colorScheme.primary,
+                    ),
+                ) {
+                    Text(actionLabel)
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+        }
+    }
+}
+
+/** Holds a boolean grant state, re-evaluating [check] on every ON_RESUME. */
+@Composable
+private fun rememberPermissionState(check: () -> Boolean): Boolean {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var granted by remember { mutableStateOf(check()) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) granted = check()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    return granted
+}
+
+private fun Context.canScheduleExactAlarms(): Boolean =
+    getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
+
+private fun Context.areNotificationsEnabled(): Boolean =
+    NotificationManagerCompat.from(this).areNotificationsEnabled()
 
 // -- Lead-time / snooze chip-row options ------------------------------------
 

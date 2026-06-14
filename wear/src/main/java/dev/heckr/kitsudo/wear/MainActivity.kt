@@ -10,7 +10,7 @@ import dev.heckr.kitsudo.domain.model.CatppuccinAccent
 import dev.heckr.kitsudo.domain.model.ThemePalette
 import dev.heckr.kitsudo.domain.usecase.GetAccentUseCase
 import dev.heckr.kitsudo.domain.usecase.GetM3ColorsUseCase
-import dev.heckr.kitsudo.domain.usecase.GetThemeFlavorUseCase
+import dev.heckr.kitsudo.domain.usecase.GetThemePaletteUseCase
 import dev.heckr.kitsudo.wear.presentation.navigation.WearNavHost
 import dev.heckr.kitsudo.wear.ui.theme.KitsudoWearTheme
 import javax.inject.Inject
@@ -18,14 +18,14 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject lateinit var getThemeFlavorUseCase: GetThemeFlavorUseCase
+    @Inject lateinit var getThemePaletteUseCase: GetThemePaletteUseCase
     @Inject lateinit var getAccentUseCase: GetAccentUseCase
     @Inject lateinit var getM3ColorsUseCase: GetM3ColorsUseCase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val palette by getThemeFlavorUseCase()
+            val palette by getThemePaletteUseCase()
                 .collectAsStateWithLifecycle(initialValue = ThemePalette.MOCHA)
             val accent by getAccentUseCase()
                 .collectAsStateWithLifecycle(initialValue = CatppuccinAccent.MAUVE)

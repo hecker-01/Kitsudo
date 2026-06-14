@@ -17,13 +17,14 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Fires (or defers, or chains) a single notification of a given [NotificationKind]
- * for one task.
+ * for one task. Handles the WorkManager-driven kinds: `PRE` reminders and the
+ * `FOLLOWUP` chain. The at-deadline `MAIN` notification is alarm-driven and is
+ * fired by [DeadlineAlarmReceiver] instead.
  *
  *  - Honors quiet hours: if `now` is inside the window the worker reschedules
  *    itself for the window's end instead of firing.
- *  - After firing a `MAIN`, if the task is still incomplete, enqueues a
- *    `FOLLOWUP` worker [FOLLOWUP_INTERVAL_MINUTES] later. The follow-up
- *    re-checks, fires (if still incomplete), and chains the next one up to
+ *  - After firing a `FOLLOWUP`, if the task is still incomplete, enqueues the
+ *    next `FOLLOWUP` [FOLLOWUP_INTERVAL_MINUTES] later, up to
  *    [MAX_FOLLOWUP_ATTEMPTS] total.
  */
 @HiltWorker
@@ -34,6 +35,7 @@ class DeadlineNotificationWorker @AssistedInject constructor(
     private val notificationHelper: NotificationHelper,
     private val preferencesRepository: NotificationPreferencesRepository,
     private val workManager: WorkManager,
+    private val notificationScheduler: NotificationScheduler,
 ) : CoroutineWorker(context, params) {
 
     companion object {
@@ -104,28 +106,12 @@ class DeadlineNotificationWorker @AssistedInject constructor(
         // -- Fire the actual notification -------------------------------
         notificationHelper.showNotification(taskId, taskTitle, kind, parentId, parentTitle)
 
-        // -- Chain a follow-up after MAIN / FOLLOWUP (not after PRE, not for subtasks) ----
+        // -- Chain the next follow-up after a FOLLOWUP (not after PRE, not for subtasks) ----
         // Subtasks only get a single MAIN ping - no recurring follow-up spam for secondary items.
-        if (parentId == null && (kind == NotificationKind.MAIN || kind == NotificationKind.FOLLOWUP)) {
-            val nextAttempt = if (kind == NotificationKind.MAIN) 1 else followupAttempt + 1
+        if (parentId == null && kind == NotificationKind.FOLLOWUP) {
+            val nextAttempt = followupAttempt + 1
             if (nextAttempt <= MAX_FOLLOWUP_ATTEMPTS) {
-                workManager.enqueueUniqueWork(
-                    NotificationScheduler.followupWorkName(taskId),
-                    ExistingWorkPolicy.REPLACE,
-                    OneTimeWorkRequestBuilder<DeadlineNotificationWorker>()
-                        .setInitialDelay(FOLLOWUP_INTERVAL_MINUTES, TimeUnit.MINUTES)
-                        .setInputData(
-                            workDataOf(
-                                KEY_TASK_ID to taskId,
-                                KEY_TASK_TITLE to taskTitle,
-                                KEY_KIND to NotificationKind.FOLLOWUP.name,
-                                KEY_DEADLINE_AT to deadlineAt,
-                                KEY_FOLLOWUP_ATTEMPT to nextAttempt,
-                            ),
-                        )
-                        .addTag(NotificationScheduler.taskNotificationsTag(taskId))
-                        .build(),
-                )
+                notificationScheduler.scheduleFollowup(taskId, taskTitle, deadlineAt, nextAttempt)
             }
         }
 
@@ -138,7 +124,9 @@ class DeadlineNotificationWorker @AssistedInject constructor(
         preLeadMinutes: Int,
     ): String = when (kind) {
         NotificationKind.PRE -> NotificationScheduler.preWorkName(taskId, preLeadMinutes)
-        NotificationKind.MAIN -> NotificationScheduler.mainWorkName(taskId)
         NotificationKind.FOLLOWUP -> NotificationScheduler.followupWorkName(taskId)
+        // MAIN is alarm-driven (DeadlineAlarmReceiver) and never reaches this worker;
+        // map it to the followup name only to keep the `when` exhaustive.
+        NotificationKind.MAIN -> NotificationScheduler.followupWorkName(taskId)
     }
 }

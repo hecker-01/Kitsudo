@@ -8,6 +8,14 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!--
+        Exact alarms drive the punctual at-deadline notification. SCHEDULE_EXACT_ALARM
+        is user-revocable (API 33+ requires the user to grant it from Settings); the
+        scheduler falls back to an inexact, Doze-allowed alarm when it isn't granted.
+        RECEIVE_BOOT_COMPLETED lets us re-arm those alarms after a reboot.
+    -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!--
         The in-app self-updater's permissions (REQUEST_INSTALL_PACKAGES and the
         legacy WRITE_EXTERNAL_STORAGE for saving the APK) live in the `github`
         flavor only. The `play` build never sideloads, so declaring them there
@@ -54,6 +62,26 @@
             android:name=".data.notification.NotificationActionReceiver"
             android:exported="false"
         />
+
+        <!-- At-deadline exact alarm -> fires the MAIN notification. -->
+        <receiver
+            android:name=".data.notification.DeadlineAlarmReceiver"
+            android:exported="false"
+        >
+            <intent-filter>
+                <action android:name="dev.heckr.kitsudo.action.FIRE_MAIN_DEADLINE" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Re-arms exact alarms after device reboot. -->
+        <receiver
+            android:name=".data.notification.BootReceiver"
+            android:exported="true"
+        >
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Wearable sync: receives toggle-complete messages from the watch. -->
         <service
