@@ -14,7 +14,7 @@ import dev.heckr.kitsudo.domain.model.TaskWithSubtasks
 import dev.heckr.kitsudo.domain.model.ThemePalette
 import dev.heckr.kitsudo.domain.usecase.GetAccentUseCase
 import dev.heckr.kitsudo.domain.usecase.GetTasksUseCase
-import dev.heckr.kitsudo.domain.usecase.GetThemeFlavorUseCase
+import dev.heckr.kitsudo.domain.usecase.GetThemePaletteUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
@@ -39,7 +39,7 @@ import javax.inject.Singleton
 class PhoneTaskPublisher @Inject constructor(
     @ApplicationContext private val context: Context,
     private val getTasksUseCase: GetTasksUseCase,
-    private val getThemeFlavorUseCase: GetThemeFlavorUseCase,
+    private val getThemePaletteUseCase: GetThemePaletteUseCase,
     private val getAccentUseCase: GetAccentUseCase,
 ) {
     private val dataClient by lazy { Wearable.getDataClient(context) }
@@ -49,7 +49,7 @@ class PhoneTaskPublisher @Inject constructor(
         scope.launch(Dispatchers.IO) {
             combine(
                 getTasksUseCase(),
-                getThemeFlavorUseCase(),
+                getThemePaletteUseCase(),
                 getAccentUseCase(),
             ) { tasks, theme, accent -> Triple(tasks, theme, accent) }
                 .collect { (tasks, theme, accent) ->
@@ -64,7 +64,7 @@ class PhoneTaskPublisher @Inject constructor(
      */
     suspend fun publishOnce() {
         val tasks  = getTasksUseCase().first()
-        val theme  = getThemeFlavorUseCase().first()
+        val theme  = getThemePaletteUseCase().first()
         val accent = getAccentUseCase().first()
         publishSnapshot(tasks, theme, accent)
     }

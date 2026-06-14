@@ -6,9 +6,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.heckr.kitsudo.domain.model.CatppuccinAccent
 import dev.heckr.kitsudo.domain.model.ThemePalette
 import dev.heckr.kitsudo.domain.usecase.GetAccentUseCase
-import dev.heckr.kitsudo.domain.usecase.GetThemeFlavorUseCase
+import dev.heckr.kitsudo.domain.usecase.GetThemePaletteUseCase
 import dev.heckr.kitsudo.domain.usecase.SetAccentUseCase
-import dev.heckr.kitsudo.domain.usecase.SetThemeFlavorUseCase
+import dev.heckr.kitsudo.domain.usecase.SetThemePaletteUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,8 +21,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ThemeViewModel @Inject constructor(
-    private val getThemeFlavorUseCase: GetThemeFlavorUseCase,
-    private val setThemeFlavorUseCase: SetThemeFlavorUseCase,
+    private val getThemePaletteUseCase: GetThemePaletteUseCase,
+    private val setThemePaletteUseCase: SetThemePaletteUseCase,
     private val getAccentUseCase: GetAccentUseCase,
     private val setAccentUseCase: SetAccentUseCase,
 ) : ViewModel() {
@@ -31,7 +31,7 @@ class ThemeViewModel @Inject constructor(
     val uiState: StateFlow<ThemeUiState> = _uiState.asStateFlow()
 
     init {
-        getThemeFlavorUseCase()
+        getThemePaletteUseCase()
             .onEach { palette -> _uiState.update { it.copy(palette = palette) } }
             .catch { /* retain default */ }
             .launchIn(viewModelScope)
@@ -43,7 +43,7 @@ class ThemeViewModel @Inject constructor(
     }
 
     fun setPalette(palette: ThemePalette) {
-        viewModelScope.launch { setThemeFlavorUseCase(palette) }
+        viewModelScope.launch { setThemePaletteUseCase(palette) }
     }
 
     fun setAccent(accent: CatppuccinAccent) {

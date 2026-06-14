@@ -2,6 +2,10 @@ package dev.heckr.kitsudo.presentation.settings
 
 import android.text.format.Formatter
 import android.view.HapticFeedbackConstants
+import android.widget.Toast
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,8 +31,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -77,6 +85,7 @@ import dev.heckr.kitsudo.data.update.AppUpdater
 import dev.heckr.kitsudo.domain.model.CatppuccinAccent
 import dev.heckr.kitsudo.domain.model.CatppuccinFlavor
 import dev.heckr.kitsudo.domain.model.ThemePalette
+import dev.heckr.kitsudo.domain.usecase.ImportTasksUseCase
 import dev.heckr.kitsudo.presentation.settings.components.NotificationCard
 import dev.heckr.kitsudo.presentation.theme.labelRes
 import dev.heckr.kitsudo.ui.theme.KitsudoTheme
@@ -98,16 +107,33 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     val installPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) { viewModel.onInstallPermissionResult() }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri -> uri?.let(viewModel::exportTo) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let(viewModel::onImportFileChosen) }
 
     LaunchedEffect(Unit) {
         viewModel.installPermissionIntent.collect { intent ->
             installPermissionLauncher.launch(intent)
         }
     }
+
+    LaunchedEffect(Unit) {
+        viewModel.messages.collect { resId ->
+            Toast.makeText(context, context.getString(resId), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val appName = stringResource(R.string.app_name)
 
     SettingsContent(
         uiState = uiState,
@@ -119,6 +145,10 @@ fun SettingsScreen(
         onSetQuietStart = viewModel::setQuietStartMinutes,
         onSetQuietEnd = viewModel::setQuietEndMinutes,
         onSetSnoozeMinutes = viewModel::setSnoozeMinutes,
+        onExport = { exportLauncher.launch(buildBackupFileName(appName)) },
+        onImport = { importLauncher.launch(arrayOf("application/json")) },
+        onImportConfirm = viewModel::importSelected,
+        onImportDialogDismissed = viewModel::dismissImportDialog,
         onUpdateCardTapped = { viewModel.onUpdateCardTapped() },
         onUpdateConfirmed = viewModel::confirmUpdate,
         onUpdateDialogDismissed = viewModel::dismissUpdateDialog,
@@ -140,6 +170,10 @@ private fun SettingsContent(
     onSetQuietStart: (Int) -> Unit,
     onSetQuietEnd: (Int) -> Unit,
     onSetSnoozeMinutes: (Int) -> Unit,
+    onExport: () -> Unit,
+    onImport: () -> Unit,
+    onImportConfirm: (importTasks: Boolean, importSettings: Boolean, mode: ImportTasksUseCase.Mode) -> Unit,
+    onImportDialogDismissed: () -> Unit,
     onUpdateCardTapped: () -> Unit,
     onUpdateConfirmed: () -> Unit,
     onUpdateDialogDismissed: () -> Unit,
@@ -207,6 +241,10 @@ private fun SettingsContent(
                         onSetSnoozeMinutes = onSetSnoozeMinutes,
                     )
 
+                    // -- Backup & restore --------------------------------------
+                    SectionLabel(stringResource(R.string.settings_section_backup))
+                    BackupCard(onExport = onExport, onImport = onImport)
+
                     // -- Updates -----------------------------------------------
                     SectionLabel(stringResource(R.string.settings_section_updates))
                     UpdateCard(
@@ -240,11 +278,176 @@ private fun SettingsContent(
         }
     }
 
-    if (uiState.showUpdateDialog) {
+    uiState.updateInfo?.takeIf { uiState.showUpdateDialog }?.let { info ->
         UpdateConfirmDialog(
+            version = info.version,
+            body = info.body,
+            sizeBytes = info.apkSizeBytes,
             onConfirm = onUpdateConfirmed,
             onDismiss = onUpdateDialogDismissed,
         )
+    }
+
+    if (uiState.showImportModeDialog) {
+        ImportOptionsDialog(
+            onConfirm = onImportConfirm,
+            onDismiss = onImportDialogDismissed,
+        )
+    }
+}
+
+// -- Backup & restore -------------------------------------------------------
+
+/** e.g. "kitsudo-backup-20260614-1530.json" - app name lowercased, spaces to dashes. */
+private fun buildBackupFileName(appName: String): String {
+    val slug = appName.lowercase().replace(Regex("\\s+"), "-")
+    val timestamp = SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date())
+    return "$slug-backup-$timestamp.json"
+}
+
+@Composable
+private fun BackupCard(
+    onExport: () -> Unit,
+    onImport: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.settings_backup_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalButton(
+                    onClick = onExport,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary,
+                    ),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(R.string.settings_backup_export))
+                }
+                FilledTonalButton(
+                    onClick = onImport,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary,
+                    ),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(R.string.settings_backup_import))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImportOptionsDialog(
+    onConfirm: (importTasks: Boolean, importSettings: Boolean, mode: ImportTasksUseCase.Mode) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var importTasks by remember { mutableStateOf(true) }
+    var importSettings by remember { mutableStateOf(true) }
+    var replace by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_backup_import_title)) },
+        text = {
+            Column {
+                Text(
+                    text = stringResource(R.string.settings_backup_import_message),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                CheckRow(
+                    label = stringResource(R.string.settings_backup_import_tasks),
+                    checked = importTasks,
+                    onCheckedChange = { importTasks = it },
+                )
+                // Merge vs replace only matters when importing tasks.
+                AnimatedVisibility(visible = importTasks) {
+                    Column(modifier = Modifier.padding(start = 32.dp)) {
+                        ModeRow(
+                            label = stringResource(R.string.settings_backup_import_merge),
+                            selected = !replace,
+                            onClick = { replace = false },
+                        )
+                        ModeRow(
+                            label = stringResource(R.string.settings_backup_import_replace),
+                            selected = replace,
+                            onClick = { replace = true },
+                        )
+                    }
+                }
+                CheckRow(
+                    label = stringResource(R.string.settings_backup_import_settings),
+                    checked = importSettings,
+                    onCheckedChange = { importSettings = it },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = importTasks || importSettings,
+                onClick = {
+                    val mode = if (replace) {
+                        ImportTasksUseCase.Mode.REPLACE
+                    } else {
+                        ImportTasksUseCase.Mode.MERGE
+                    }
+                    onConfirm(importTasks, importSettings, mode)
+                },
+            ) {
+                Text(stringResource(R.string.settings_backup_import_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_backup_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun CheckRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) },
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
+private fun ModeRow(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Text(text = label, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -722,14 +925,13 @@ private fun AboutCard(
 
 @Composable
 private fun UpdateConfirmDialog(
+    version: String,
+    body: String?,
+    sizeBytes: Long,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    val checker = dev.heckr.kitsudo.data.update.UpdateChecker
-    val version = checker.latestVersion ?: return
-    val body = checker.releaseBody
-    val sizeBytes = checker.apkSizeBytes
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -832,6 +1034,10 @@ private fun SettingsPreviewMocha() {
                 onSetQuietStart = {},
                 onSetQuietEnd = {},
                 onSetSnoozeMinutes = {},
+                onExport = {},
+                onImport = {},
+                onImportConfirm = { _, _, _ -> },
+                onImportDialogDismissed = {},
                 onUpdateCardTapped = {},
                 onUpdateConfirmed = {},
                 onUpdateDialogDismissed = {},
@@ -862,6 +1068,10 @@ private fun SettingsPreviewMaterial3() {
                 onSetQuietStart = {},
                 onSetQuietEnd = {},
                 onSetSnoozeMinutes = {},
+                onExport = {},
+                onImport = {},
+                onImportConfirm = { _, _, _ -> },
+                onImportDialogDismissed = {},
                 onUpdateCardTapped = {},
                 onUpdateConfirmed = {},
                 onUpdateDialogDismissed = {},
@@ -891,6 +1101,10 @@ private fun SettingsPreviewLatte() {
                 onSetQuietStart = {},
                 onSetQuietEnd = {},
                 onSetSnoozeMinutes = {},
+                onExport = {},
+                onImport = {},
+                onImportConfirm = { _, _, _ -> },
+                onImportDialogDismissed = {},
                 onUpdateCardTapped = {},
                 onUpdateConfirmed = {},
                 onUpdateDialogDismissed = {},

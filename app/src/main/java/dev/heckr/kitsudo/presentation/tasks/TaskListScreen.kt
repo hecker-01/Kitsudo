@@ -104,19 +104,30 @@ fun TaskListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val deletedMessage = stringResource(R.string.task_deleted_message)
     val undoLabel = stringResource(R.string.task_swipe_undo)
+    val showUndoSnackbar: suspend () -> Unit = {
+        // Replace any still-showing snackbar so rapid deletes don't queue up.
+        snackbarHostState.currentSnackbarData?.dismiss()
+        val result = snackbarHostState.showSnackbar(
+            message = deletedMessage,
+            actionLabel = undoLabel,
+            withDismissAction = true,
+            duration = SnackbarDuration.Short,
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+            viewModel.undoDelete()
+        } else {
+            // Timed out or dismissed without undo: drop the saved snapshot.
+            viewModel.onUndoWindowClosed()
+        }
+    }
     LaunchedEffect(viewModel) {
-        viewModel.deleteEvents.collect {
-            // Replace any still-showing snackbar so rapid deletes don't queue up.
-            snackbarHostState.currentSnackbarData?.dismiss()
-            val result = snackbarHostState.showSnackbar(
-                message = deletedMessage,
-                actionLabel = undoLabel,
-                withDismissAction = true,
-                duration = SnackbarDuration.Short,
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.undoDelete()
-            }
+        viewModel.deleteEvents.collect { showUndoSnackbar() }
+    }
+    // A deletion that survived process death: re-offer undo on (re)launch.
+    LaunchedEffect(uiState.pendingUndoRestore) {
+        if (uiState.pendingUndoRestore) {
+            showUndoSnackbar()
+            viewModel.consumePendingUndoRestore()
         }
     }
 
@@ -435,6 +446,10 @@ private fun TaskCard(
             } else {
                 HapticFeedbackConstants.CONFIRM
             },
+            swipeLeftLabel = stringResource(R.string.task_delete_label),
+            swipeRightLabel = stringResource(
+                if (task.isCompleted) R.string.task_mark_incomplete else R.string.task_mark_complete,
+            ),
             backgroundContent = { direction ->
                 TaskSwipeBackground(direction = direction, isCompleted = task.isCompleted)
             },
@@ -714,6 +729,10 @@ private fun SubtaskListRow(
         } else {
             HapticFeedbackConstants.CONFIRM
         },
+        swipeLeftLabel = stringResource(R.string.task_delete_label),
+        swipeRightLabel = stringResource(
+            if (subtask.isCompleted) R.string.task_mark_incomplete else R.string.task_mark_complete,
+        ),
         backgroundContent = { direction ->
             TaskSwipeBackground(direction = direction, isCompleted = subtask.isCompleted)
         },

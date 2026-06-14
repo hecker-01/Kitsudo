@@ -22,6 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -51,6 +54,13 @@ fun SwipeActionBox(
     onSwipeRight: (() -> Unit)? = null,
     swipeLeftHaptic: Int = HapticFeedbackConstants.REJECT,
     swipeRightHaptic: Int = HapticFeedbackConstants.CONFIRM,
+    /**
+     * Accessibility labels for the swipe actions. When set (alongside the matching
+     * callback), each is exposed as a TalkBack custom action so the action is
+     * reachable without performing the gesture.
+     */
+    swipeLeftLabel: String? = null,
+    swipeRightLabel: String? = null,
     thresholdFraction: Float = 0.35f,
     backgroundContent: @Composable (direction: SwipeDirection?) -> Unit = {},
     content: @Composable () -> Unit,
@@ -79,7 +89,21 @@ fun SwipeActionBox(
         }
     }
 
-    Box(modifier = modifier.onSizeChanged { widthPx = it.width }) {
+    // Non-gesture path to the swipe actions for accessibility services.
+    val a11yActions = buildList {
+        onSwipeRight?.let { cb ->
+            if (swipeRightLabel != null) add(CustomAccessibilityAction(swipeRightLabel) { cb(); true })
+        }
+        onSwipeLeft?.let { cb ->
+            if (swipeLeftLabel != null) add(CustomAccessibilityAction(swipeLeftLabel) { cb(); true })
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .onSizeChanged { widthPx = it.width }
+            .semantics { if (a11yActions.isNotEmpty()) customActions = a11yActions },
+    ) {
 
         // matchParentSize() defers measurement until after the foreground is
         // laid out, so the background always matches the row's actual height.

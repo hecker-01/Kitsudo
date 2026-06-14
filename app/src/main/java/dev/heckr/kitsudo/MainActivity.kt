@@ -29,7 +29,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import dev.heckr.kitsudo.data.notification.NotificationHelper
-import dev.heckr.kitsudo.data.update.UpdateChecker
+import dev.heckr.kitsudo.data.update.AppUpdater
 import dev.heckr.kitsudo.presentation.navigation.KitsudoNavHost
 import dev.heckr.kitsudo.presentation.onboarding.OnboardingScreen
 import dev.heckr.kitsudo.presentation.onboarding.OnboardingState
@@ -39,9 +39,12 @@ import dev.heckr.kitsudo.presentation.update.WhatsNewScreen
 import dev.heckr.kitsudo.presentation.update.WhatsNewViewModel
 import dev.heckr.kitsudo.ui.theme.KitsudoTheme
 import kotlinx.coroutines.flow.MutableStateFlow
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject lateinit var appUpdater: AppUpdater
 
     private val themeViewModel: ThemeViewModel by viewModels()
     private val whatsNewViewModel: WhatsNewViewModel by viewModels()
@@ -60,7 +63,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        UpdateChecker.check(this)
+        appUpdater.checkForUpdates(this)
         pendingOpen.value = intent?.extractPendingOpen()
         setContent {
             val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()

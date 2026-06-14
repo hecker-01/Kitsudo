@@ -2,11 +2,10 @@ package dev.heckr.kitsudo.domain.usecase
 
 import dev.heckr.kitsudo.domain.model.ThemePalette
 import dev.heckr.kitsudo.domain.repository.ThemeRepository
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-class GetThemeFlavorUseCase @Inject constructor(
+class SetThemePaletteUseCase @Inject constructor(
     private val repository: ThemeRepository,
 ) {
-    operator fun invoke(): Flow<ThemePalette> = repository.getThemePalette()
+    suspend operator fun invoke(palette: ThemePalette) = repository.setThemePalette(palette)
 }

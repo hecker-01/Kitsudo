@@ -1,7 +1,6 @@
 package dev.heckr.kitsudo.domain.usecase
 
 import dev.heckr.kitsudo.domain.repository.TaskRepository
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
@@ -19,17 +18,15 @@ class CascadeCompleteUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(taskId: String, isCompleted: Boolean) {
         val task = repository.getTaskById(taskId) ?: return
-        completeTask(taskId, isCompleted)
 
         if (task.parentId == null) {
             // -- Top-level task ----------------------------------------
-            // Cascade the same state to every subtask.
-            repository.getSubtasks(taskId).first().forEach { subtask ->
-                completeTask(subtask.id, isCompleted)
-            }
+            // Mirror the state onto the task and every subtask in one atomic write.
+            repository.setCompletedForTaskAndSubtasks(taskId, isCompleted)
         } else {
             // -- Subtask -----------------------------------------------
-            val siblings = repository.getSubtasks(task.parentId).first()
+            completeTask(taskId, isCompleted)
+            val siblings = repository.getSubtasksOnce(task.parentId)
             if (isCompleted) {
                 // All siblings now done → auto-complete parent.
                 val allDone = siblings.all { s ->
