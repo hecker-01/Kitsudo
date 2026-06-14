@@ -9,10 +9,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.runtime.Composable
@@ -20,7 +23,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,6 +41,7 @@ import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import dev.heckr.kitsudo.domain.model.TaskWithSubtasks
+import dev.heckr.kitsudo.wear.BuildConfig
 import dev.heckr.kitsudo.wear.ui.theme.LocalWearPaletteColors
 
 @Composable
@@ -57,26 +63,39 @@ fun WearTaskListScreen(
 
         is WearTaskListUiState.NoData -> {
             val p = LocalWearPaletteColors.current
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
+            val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+            // Scrollable so the app-info footer sits just below the fold; the
+            // message fills the first screen (centered) on its own.
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.padding(horizontal = 24.dp),
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(screenHeight),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = "No tasks yet",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = p.text,
-                    )
-                    Text(
-                        text = "Add tasks in Kitsudo on your phone",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = p.subtext0,
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                    ) {
+                        Text(
+                            text = "No tasks yet",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = p.text,
+                        )
+                        Text(
+                            text = "Add tasks in Kitsudo on your phone",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = p.subtext0,
+                        )
+                    }
                 }
+                AppInfoFooter()
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
 
@@ -110,6 +129,40 @@ private fun TaskList(
                 onToggle = { onToggle(tws.task.id, tws.task.isCompleted) },
             )
         }
+
+        item { AppInfoFooter() }
+    }
+}
+
+/** App identity footer: package name, release (version) name, and build number. */
+@Composable
+private fun AppInfoFooter() {
+    val p = LocalWearPaletteColors.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp, bottom = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(1.dp),
+    ) {
+        Text(
+            text = BuildConfig.APPLICATION_ID,
+            style = MaterialTheme.typography.labelSmall,
+            color = p.subtext0,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = "v${BuildConfig.VERSION_NAME}",
+            style = MaterialTheme.typography.labelSmall,
+            color = p.subtext0,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = "Build ${BuildConfig.VERSION_CODE}",
+            style = MaterialTheme.typography.labelSmall,
+            color = p.subtext0,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
