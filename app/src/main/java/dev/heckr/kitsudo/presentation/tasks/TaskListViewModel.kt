@@ -132,7 +132,7 @@ class TaskListViewModel @Inject constructor(
                     val tagFilter = state.tagFilter?.takeIf { id -> allTags.any { it.id == id } }
                     state.copy(
                         allTasks = ordered,
-                        tasks = ordered.applyFilter(state.filter, tagFilter),
+                        tasks = ordered.applyFilter(state.filter, tagFilter, state.attributeFilters),
                         allTags = allTags,
                         tagFilter = tagFilter,
                         sortMode = sortMode,
@@ -158,7 +158,7 @@ class TaskListViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 filter = filter,
-                tasks = state.allTasks.applyFilter(filter, state.tagFilter),
+                tasks = state.allTasks.applyFilter(filter, state.tagFilter, state.attributeFilters),
             )
         }
     }
@@ -168,7 +168,22 @@ class TaskListViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 tagFilter = tagId,
-                tasks = state.allTasks.applyFilter(state.filter, tagId),
+                tasks = state.allTasks.applyFilter(state.filter, tagId, state.attributeFilters),
+            )
+        }
+    }
+
+    /** Toggles a stackable attribute filter on or off. */
+    fun toggleAttributeFilter(attribute: TaskAttributeFilter) {
+        _uiState.update { state ->
+            val attrs = if (attribute in state.attributeFilters) {
+                state.attributeFilters - attribute
+            } else {
+                state.attributeFilters + attribute
+            }
+            state.copy(
+                attributeFilters = attrs,
+                tasks = state.allTasks.applyFilter(state.filter, state.tagFilter, attrs),
             )
         }
     }
@@ -432,6 +447,7 @@ private fun List<TaskWithSubtasksUi>.fieldSorted(
 private fun List<TaskWithSubtasksUi>.applyFilter(
     filter: TaskListFilter,
     tagFilter: String?,
+    attributeFilters: Set<TaskAttributeFilter>,
 ): List<TaskWithSubtasksUi> {
     val byStatus = when (filter) {
         TaskListFilter.ALL -> this
@@ -439,9 +455,20 @@ private fun List<TaskWithSubtasksUi>.applyFilter(
         TaskListFilter.OVERDUE -> filter { it.isDeadlineOverdue }
         TaskListFilter.COMPLETED -> filter { it.isCompleted }
     }
-    return if (tagFilter == null) {
+    val byTag = if (tagFilter == null) {
         byStatus
     } else {
         byStatus.filter { task -> task.tags.any { it.id == tagFilter } }
+    }
+    // Each active attribute filter must hold (AND).
+    return byTag.filter { task ->
+        attributeFilters.all { attr ->
+            when (attr) {
+                TaskAttributeFilter.HIGH_PRIORITY -> task.isHighPriority
+                TaskAttributeFilter.HAS_DEADLINE -> task.deadlineAt != null
+                TaskAttributeFilter.HAS_SUBTASKS -> task.subtaskCount > 0
+                TaskAttributeFilter.RECURRING -> task.recurrenceUnit != null
+            }
+        }
     }
 }

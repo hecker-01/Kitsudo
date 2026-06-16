@@ -30,6 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -221,6 +222,15 @@ private fun SettingsContent(
                             with(density) { contentHeight = size.height.toDp() }
                         },
                 ) {
+                    // -- Updates (pinned to the top when an update is waiting) -
+                    if (uiState.pinUpdatesToTop) {
+                        UpdatesSection(
+                            status = uiState.updateStatus,
+                            usePlayStoreUpdates = uiState.usePlayStoreUpdates,
+                            onTap = onUpdateCardTapped,
+                        )
+                    }
+
                     // -- Appearance --------------------------------------------
                     SectionLabel(stringResource(R.string.settings_section_appearance))
                     AppearanceCard(
@@ -245,13 +255,14 @@ private fun SettingsContent(
                     SectionLabel(stringResource(R.string.settings_section_backup))
                     BackupCard(onExport = onExport, onImport = onImport)
 
-                    // -- Updates -----------------------------------------------
-                    SectionLabel(stringResource(R.string.settings_section_updates))
-                    UpdateCard(
-                        status = uiState.updateStatus,
-                        usePlayStoreUpdates = uiState.usePlayStoreUpdates,
-                        onTap = onUpdateCardTapped,
-                    )
+                    // -- Updates (default position when not pinned) ------------
+                    if (!uiState.pinUpdatesToTop) {
+                        UpdatesSection(
+                            status = uiState.updateStatus,
+                            usePlayStoreUpdates = uiState.usePlayStoreUpdates,
+                            onTap = onUpdateCardTapped,
+                        )
+                    }
 
                     // -- About -------------------------------------------------
                     SectionLabel(stringResource(R.string.settings_section_about))
@@ -784,6 +795,52 @@ private fun ThemeOptionCard(
             )
         }
     }
+}
+
+// -- Updates section --------------------------------------------------------
+
+/** The Updates section label (with an optional "!" badge) plus the update card. */
+@Composable
+private fun UpdatesSection(
+    status: AppUpdater.Status,
+    usePlayStoreUpdates: Boolean,
+    onTap: () -> Unit,
+) {
+    // Show the badge whenever an update is actually waiting - whether the section
+    // is pinned to the top or sitting in its default position after a manual check.
+    val showBadge = status is AppUpdater.Status.Available
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_section_updates),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        if (showBadge) {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+            ) {
+                Icon(
+                    Icons.Filled.Refresh,
+                    contentDescription = stringResource(R.string.settings_updates_available_badge),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+        }
+    }
+    UpdateCard(
+        status = status,
+        usePlayStoreUpdates = usePlayStoreUpdates,
+        onTap = onTap,
+    )
 }
 
 // -- Updates card -----------------------------------------------------------

@@ -13,6 +13,9 @@
 
     <!-- Task sort mode -->
     <string name="task_sort_label">Change sort order</string>
+    <string name="task_filter_sort_label">Filter and sort</string>
+    <string name="task_filter_section">Filter</string>
+    <string name="task_sort_section">Sort by</string>
     <string name="task_sort_smart">Smart</string>
     <string name="task_sort_custom">Custom</string>
     <string name="task_sort_alphabetical">A-Z</string>
@@ -26,6 +29,10 @@
     <string name="task_filter_active">Active</string>
     <string name="task_filter_overdue">Overdue</string>
     <string name="task_filter_completed">Completed</string>
+    <string name="task_filter_high_priority">High priority</string>
+    <string name="task_filter_has_deadline">Has deadline</string>
+    <string name="task_filter_has_subtasks">Has subtasks</string>
+    <string name="task_filter_recurring">Recurring</string>
     <string name="task_filter_empty_active">No active tasks.</string>
     <string name="task_filter_empty_overdue">Nothing overdue. 🎉</string>
     <string name="task_filter_empty_completed">No completed tasks yet.</string>
@@ -34,6 +41,7 @@
     <string name="task_priority_high">High priority</string>
     <string name="task_priority_set">Set as high priority</string>
     <string name="task_priority_remove">Remove high priority</string>
+    <string name="task_overdue">Overdue</string>
 
     <!-- Task actions -->
     <string name="task_add_label">Add task</string>
@@ -97,6 +105,7 @@
     <string name="tags_new_label">New tag</string>
     <string name="tags_new_hint">Tag name…</string>
     <string name="tags_new_add">Add tag</string>
+    <string name="tags_pick_color">Pick colour</string>
     <string name="tags_filter_all">All tags</string>
 
     <!-- Task subtasks -->
@@ -268,6 +277,7 @@
 
     <!-- Settings - updates -->
     <string name="settings_updates_check">Check for updates</string>
+    <string name="settings_updates_available_badge">Update available</string>
     <string
         name="settings_updates_tap_hint"
     >Tap to check for new versions</string>

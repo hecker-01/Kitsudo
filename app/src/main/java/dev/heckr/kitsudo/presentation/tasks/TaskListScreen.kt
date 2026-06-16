@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,27 +30,26 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RippleConfiguration
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -58,6 +59,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -76,6 +78,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -181,6 +184,7 @@ fun TaskListScreen(
         onCreateTag = viewModel::createTag,
         onDeleteTag = viewModel::deleteTag,
         onSetSortMode = viewModel::setSortMode,
+        onToggleAttributeFilter = viewModel::toggleAttributeFilter,
         onReorder = viewModel::reorderTasks,
         modifier = modifier,
     )
@@ -212,6 +216,7 @@ private fun TaskListContent(
     onCreateTag: (String, dev.heckr.kitsudo.domain.model.CatppuccinAccent, (dev.heckr.kitsudo.domain.model.Tag) -> Unit) -> Unit,
     onDeleteTag: (String) -> Unit,
     onSetSortMode: (TaskSortMode) -> Unit,
+    onToggleAttributeFilter: (TaskAttributeFilter) -> Unit,
     onReorder: (orderedIds: List<String>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -266,7 +271,7 @@ private fun TaskListContent(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            // -- Filter chip row + sort toggle ------------------------------
+            // -- Filter chip row + combined filter/sort button --------------
             Row(verticalAlignment = Alignment.CenterVertically) {
                 FilterChipRow(
                     currentFilter = uiState.filter,
@@ -274,18 +279,14 @@ private fun TaskListContent(
                     onFilterSelected = onSetFilter,
                     modifier = Modifier.weight(1f),
                 )
-                SortModeAction(
+                FilterSortAction(
                     sortMode = uiState.sortMode,
+                    attributeFilters = uiState.attributeFilters,
+                    allTags = uiState.allTags,
+                    tagFilter = uiState.tagFilter,
                     onSetSortMode = onSetSortMode,
-                )
-            }
-
-            // -- Tag filter row (only when tags exist) ----------------------
-            if (uiState.allTags.isNotEmpty()) {
-                TagFilterRow(
-                    tags = uiState.allTags,
-                    selectedTagId = uiState.tagFilter,
-                    onSelect = onSetTagFilter,
+                    onToggleAttributeFilter = onToggleAttributeFilter,
+                    onSetTagFilter = onSetTagFilter,
                 )
             }
 
@@ -329,6 +330,7 @@ private fun TaskListContent(
 
 // -- Filter chip row --------------------------------------------------------
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FilterChipRow(
     currentFilter: TaskListFilter,
@@ -337,6 +339,11 @@ private fun FilterChipRow(
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
+    CompositionLocalProvider(
+        LocalRippleConfiguration provides RippleConfiguration(
+            color = MaterialTheme.colorScheme.primary,
+        ),
+    ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
@@ -349,110 +356,229 @@ private fun FilterChipRow(
             } else {
                 stringResource(filter.labelRes())
             }
+            val selected = currentFilter == filter
             FilterChip(
-                selected = currentFilter == filter,
+                selected = selected,
                 onClick = {
                     view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                     onFilterSelected(filter)
                 },
                 label = { Text(label) },
                 colors = FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    labelColor = MaterialTheme.colorScheme.onSurface,
                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.primary,
+                    selectedLeadingIconColor = MaterialTheme.colorScheme.primary,
                 ),
+                border = null,
             )
         }
     }
-}
-
-// -- Tag filter row ---------------------------------------------------------
-
-@Composable
-private fun TagFilterRow(
-    tags: List<Tag>,
-    selectedTagId: String?,
-    onSelect: (String?) -> Unit,
-) {
-    val view = LocalView.current
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 2.dp),
-    ) {
-        tags.forEach { tag ->
-            val selected = tag.id == selectedTagId
-            val color = tagColor(tag.color)
-            FilterChip(
-                selected = selected,
-                onClick = {
-                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                    // Tapping the active tag clears the filter.
-                    onSelect(if (selected) null else tag.id)
-                },
-                label = { Text(tag.name) },
-                leadingIcon = {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(color),
-                    )
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = color.copy(alpha = 0.22f),
-                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                    selectedLeadingIconColor = color,
-                ),
-            )
-        }
     }
 }
 
-// -- Sort-mode top-bar action -----------------------------------------------
+// -- Combined filter + sort top-bar action ----------------------------------
 
 @Composable
-private fun SortModeAction(
+private fun FilterSortAction(
     sortMode: TaskSortMode,
+    attributeFilters: Set<TaskAttributeFilter>,
+    allTags: List<Tag>,
+    tagFilter: String?,
     onSetSortMode: (TaskSortMode) -> Unit,
+    onToggleAttributeFilter: (TaskAttributeFilter) -> Unit,
+    onSetTagFilter: (String?) -> Unit,
+) {
+    var sheetOpen by remember { mutableStateOf(false) }
+    // Highlight the button whenever filtering or manual ordering is active.
+    val active = attributeFilters.isNotEmpty() ||
+        tagFilter != null ||
+        sortMode == TaskSortMode.CUSTOM
+    IconButton(onClick = { sheetOpen = true }, modifier = Modifier.padding(end = 2.dp)) {
+        Icon(
+            painterResource(R.drawable.ic_filter_list),
+            contentDescription = stringResource(R.string.task_filter_sort_label),
+            tint = if (active) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            modifier = Modifier.size(26.dp),
+        )
+    }
+    if (sheetOpen) {
+        FilterSortSheet(
+            sortMode = sortMode,
+            attributeFilters = attributeFilters,
+            allTags = allTags,
+            tagFilter = tagFilter,
+            onSetSortMode = onSetSortMode,
+            onToggleAttributeFilter = onToggleAttributeFilter,
+            onSetTagFilter = onSetTagFilter,
+            onDismiss = { sheetOpen = false },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun FilterSortSheet(
+    sortMode: TaskSortMode,
+    attributeFilters: Set<TaskAttributeFilter>,
+    allTags: List<Tag>,
+    tagFilter: String?,
+    onSetSortMode: (TaskSortMode) -> Unit,
+    onToggleAttributeFilter: (TaskAttributeFilter) -> Unit,
+    onSetTagFilter: (String?) -> Unit,
+    onDismiss: () -> Unit,
 ) {
     val view = LocalView.current
-    var menuOpen by remember { mutableStateOf(false) }
-    Box(modifier = Modifier.padding(end = 2.dp)) {
-        IconButton(onClick = { menuOpen = true }) {
-            Icon(
-                Icons.AutoMirrored.Filled.List,
-                contentDescription = stringResource(R.string.task_sort_label),
-                // Tint primary in custom mode to signal manual ordering is active.
-                tint = if (sortMode == TaskSortMode.CUSTOM) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                modifier = Modifier.size(28.dp),
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+      // Press/hover ripple on the accent instead of the muddy default tint.
+      CompositionLocalProvider(
+          LocalRippleConfiguration provides RippleConfiguration(
+              color = MaterialTheme.colorScheme.primary,
+          ),
+      ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.task_filter_sort_label),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 12.dp),
             )
-        }
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-          CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
-            TaskSortMode.entries.forEach { mode ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(mode.labelRes())) },
-                    onClick = {
-                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                        onSetSortMode(mode)
-                        menuOpen = false
-                    },
-                    trailingIcon = if (mode == sortMode) {
-                        { Icon(Icons.Filled.Check, contentDescription = null) }
-                    } else {
-                        null
-                    },
-                )
+
+            SheetSectionHeader(stringResource(R.string.task_filter_section))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                TaskAttributeFilter.entries.forEach { attr ->
+                    val checked = attr in attributeFilters
+                    AccentFilterChip(
+                        selected = checked,
+                        label = stringResource(attr.labelRes()),
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            onToggleAttributeFilter(attr)
+                        },
+                    )
+                }
             }
-          }
+
+            // -- Tags (only when any exist) ---------------------------------
+            if (allTags.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                SheetSectionHeader(stringResource(R.string.tags_label))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    allTags.forEach { tag ->
+                        val selected = tag.id == tagFilter
+                        val color = tagColor(tag.color)
+                        // Tag chips ripple in their own colour, not the global accent.
+                        CompositionLocalProvider(
+                            LocalRippleConfiguration provides RippleConfiguration(color = color),
+                        ) {
+                        FilterChip(
+                            selected = selected,
+                            onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                // Tapping the active tag clears the filter.
+                                onSetTagFilter(if (selected) null else tag.id)
+                            },
+                            label = { Text(tag.name) },
+                            leadingIcon = {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(color),
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                labelColor = color,
+                                selectedContainerColor = color.copy(alpha = 0.22f),
+                                selectedLabelColor = color,
+                                selectedLeadingIconColor = color,
+                            ),
+                            border = null,
+                        )
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 16.dp),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+            )
+
+            SheetSectionHeader(stringResource(R.string.task_sort_section))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                TaskSortMode.entries.forEach { mode ->
+                    AccentFilterChip(
+                        selected = mode == sortMode,
+                        label = stringResource(mode.labelRes()),
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            onSetSortMode(mode)
+                        },
+                    )
+                }
+            }
         }
+      }
     }
+}
+
+@Composable
+private fun SheetSectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(bottom = 8.dp),
+    )
+}
+
+@Composable
+private fun AccentFilterChip(
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        leadingIcon = if (selected) {
+            { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+        } else {
+            null
+        },
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            labelColor = MaterialTheme.colorScheme.onSurface,
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.primary,
+            selectedLeadingIconColor = MaterialTheme.colorScheme.primary,
+        ),
+        border = null,
+    )
 }
 
 // -- Task list --------------------------------------------------------------
@@ -586,28 +712,15 @@ private fun TaskCard(
                             .weight(1f)
                             .padding(start = 4.dp),
                     ) {
-                        // Title + optional priority star
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (task.isHighPriority && !task.isCompleted) {
-                                Icon(
-                                    Icons.Filled.Star,
-                                    contentDescription = stringResource(R.string.task_priority_high),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier
-                                        .size(14.dp)
-                                        .padding(end = 3.dp),
-                                )
-                            }
-                            Text(
-                                text = task.title,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textDecoration = if (task.isCompleted) TextDecoration.LineThrough
-                                else null,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
+                        Text(
+                            text = task.title,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textDecoration = if (task.isCompleted) TextDecoration.LineThrough
+                            else null,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                         if (task.description.isNotBlank()) {
                             Text(
                                 text = task.description,
@@ -625,6 +738,7 @@ private fun TaskCard(
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalArrangement = Arrangement.spacedBy(4.dp),
+                                maxLines = 2,
                                 modifier = Modifier.padding(top = 3.dp),
                             ) {
                                 if (task.deadlineAt != null) {
@@ -648,6 +762,25 @@ private fun TaskCard(
                                 task.tags.forEach { tag -> TagChip(tag = tag) }
                             }
                         }
+                    }
+                    if (task.isDeadlineOverdue) {
+                        Icon(
+                            Icons.Filled.Warning,
+                            contentDescription = stringResource(R.string.task_overdue),
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier
+                                .padding(start = 4.dp)
+                                .size(18.dp),
+                        )
+                    } else if (task.isHighPriority && !task.isCompleted) {
+                        Icon(
+                            Icons.Filled.Star,
+                            contentDescription = stringResource(R.string.task_priority_high),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .padding(start = 4.dp)
+                                .size(18.dp),
+                        )
                     }
                     if (task.subtaskCount > 0) {
                         IconButton(
@@ -713,22 +846,31 @@ private fun TaskCard(
             }
         }
 
-        // Thin accent bar underneath the item - error colour for overdue,
-        // primary for high-priority-only, plain divider otherwise.
-        when {
-            task.isDeadlineOverdue -> Box(
+        // Thin subtask progress bar underneath the item - only shown when the
+        // task has subtasks. Red for overdue tasks, accent otherwise.
+        if (task.subtaskCount > 0) {
+            val progress by animateFloatAsState(
+                targetValue = task.subtaskCompletedCount.toFloat() / task.subtaskCount,
+                label = "subtaskProgress",
+            )
+            val progressColor = if (task.isDeadlineOverdue) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.primary
+            }
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(3.dp)
-                    .background(MaterialTheme.colorScheme.error),
-            )
-            task.isHighPriority && !task.isCompleted -> Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .background(MaterialTheme.colorScheme.primary),
-            )
-            else -> HorizontalDivider()
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(progress)
+                        .background(progressColor),
+                )
+            }
         }
     }
 }
@@ -983,6 +1125,7 @@ private fun TaskListPreview() {
             onCreateTag = { _, _, _ -> },
             onDeleteTag = {},
             onSetSortMode = {},
+            onToggleAttributeFilter = {},
             onReorder = {},
         )
     }

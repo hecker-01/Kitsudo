@@ -74,6 +74,8 @@ app/src/main/java/dev/heckr/kitsudo/
 
 `CatppuccinFlavor` still exists as a domain model but is only used by the color scheme functions in `Theme.kt`. All public API uses `ThemePalette`.
 
+**Accent-first rule:** UI elements should follow the accent color (`colorScheme.primary` / `primaryContainer`) as much as possible unless a specific semantic colour is required (e.g. `error` for overdue, tag-specific colours for tag chips). This applies to selected *and* unselected states - prefer accent-tinted borders, labels, and icons over the neutral default greys for chips, controls, and interactive affordances.
+
 ### Task data model
 
 `Task` has `parentId: String?` for subtasks (max 2 levels enforced by UX, not schema). `GetTasksUseCase` returns `Flow<List<TaskWithSubtasks>>` (parent + children), not `Flow<List<Task>>`. The list screen uses `TaskWithSubtasksUi`; the detail screen uses `TaskUi`.

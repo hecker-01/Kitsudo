@@ -57,6 +57,9 @@ class SettingsViewModel @Inject constructor(
             packageName = BuildConfig.APPLICATION_ID,
             usePlayStoreUpdates = BuildConfig.PLAY_STORE_BUILD ||
                 appUpdater.isInstalledFromPlayStore(appContext),
+            // Snapshot at screen open - an update already found by the launch check
+            // pins the Updates section to the top this session.
+            pinUpdatesToTop = appUpdater.status.value is AppUpdater.Status.Available,
         ),
     )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()

@@ -12,19 +12,23 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -83,6 +87,7 @@ fun TagPickerSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .imePadding()
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 16.dp),
             ) {
@@ -101,9 +106,11 @@ fun TagPickerSheet(
                         modifier = Modifier.padding(vertical = 4.dp),
                     )
                 } else {
+                    // Tag list scrolls within its own capped area so it can never
+                    // push the create section below off-screen.
                     Column(
                         modifier = Modifier
-                            .heightIn(max = 260.dp)
+                            .heightIn(max = 250.dp)
                             .verticalScroll(rememberScrollState()),
                     ) {
                         allTags.forEach { tag ->
@@ -129,60 +136,44 @@ fun TagPickerSheet(
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
 
+                val addTag = {
+                    if (newName.isNotBlank()) {
+                        onCreate(newName.trim(), newColor)
+                        newName = ""
+                    }
+                }
+
                 OutlinedTextField(
                     value = newName,
                     onValueChange = { newName = it },
                     placeholder = { Text(stringResource(R.string.tags_new_hint)) },
                     singleLine = true,
                     leadingIcon = {
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .clip(CircleShape)
-                                .background(tagColor(newColor)),
+                        ColorPickerDot(
+                            selected = newColor,
+                            onSelect = { newColor = it },
                         )
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = addTag, enabled = newName.isNotBlank()) {
+                            Icon(
+                                Icons.Filled.Add,
+                                contentDescription = stringResource(R.string.tags_new_add),
+                                tint = if (newName.isNotBlank()) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                },
+                            )
+                        }
                     },
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Words,
                         imeAction = ImeAction.Done,
                     ),
+                    keyboardActions = KeyboardActions(onDone = { addTag() }),
                     modifier = Modifier.fillMaxWidth(),
                 )
-
-                Spacer(Modifier.padding(top = 10.dp))
-
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    CatppuccinAccent.entries.forEach { accent ->
-                        ColorSwatch(
-                            color = tagColor(accent),
-                            selected = newColor == accent,
-                            onClick = { newColor = accent },
-                        )
-                    }
-                }
-
-                Spacer(Modifier.padding(top = 14.dp))
-
-                FilledTonalButton(
-                    onClick = {
-                        if (newName.isNotBlank()) {
-                            onCreate(newName.trim(), newColor)
-                            newName = ""
-                        }
-                    },
-                    enabled = newName.isNotBlank(),
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.tags_new_add))
-                }
 
                 Row(
                     horizontalArrangement = Arrangement.End,
@@ -233,6 +224,62 @@ private fun TagRow(
                 contentDescription = stringResource(R.string.tags_delete),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/**
+ * The leading colour dot inside the new-tag field. Tapping it opens a small
+ * popup of accent swatches; picking one closes the popup.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ColorPickerDot(
+    selected: CatppuccinAccent,
+    onSelect: (CatppuccinAccent) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(26.dp)
+                .clip(CircleShape)
+                .background(tagColor(selected))
+                .border(2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), CircleShape)
+                .clickable { expanded = true },
+        ) {
+            Icon(
+                Icons.Filled.ArrowDropDown,
+                contentDescription = stringResource(R.string.tags_pick_color),
+                tint = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                maxItemsInEachRow = 5,
+                modifier = Modifier
+                    .width(252.dp)
+                    .padding(16.dp),
+            ) {
+                CatppuccinAccent.entries.forEach { accent ->
+                    ColorSwatch(
+                        color = tagColor(accent),
+                        selected = selected == accent,
+                        onClick = {
+                            onSelect(accent)
+                            expanded = false
+                        },
+                    )
+                }
+            }
         }
     }
 }

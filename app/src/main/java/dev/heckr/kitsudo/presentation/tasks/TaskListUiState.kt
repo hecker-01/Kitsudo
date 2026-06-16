@@ -5,13 +5,28 @@ import dev.heckr.kitsudo.domain.model.Tag
 import dev.heckr.kitsudo.domain.model.TaskSortMode
 
 enum class TaskListFilter {
-    ALL, ACTIVE, OVERDUE, COMPLETED;
+    ACTIVE, OVERDUE, ALL, COMPLETED;
 
     fun labelRes(): Int = when (this) {
         ALL -> R.string.task_filter_all
         ACTIVE -> R.string.task_filter_active
         OVERDUE -> R.string.task_filter_overdue
         COMPLETED -> R.string.task_filter_completed
+    }
+}
+
+/**
+ * Toggleable attribute filters that stack on top of the status [TaskListFilter]
+ * (combined with AND). Surfaced through the combined filter/sort menu.
+ */
+enum class TaskAttributeFilter {
+    HIGH_PRIORITY, HAS_DEADLINE, HAS_SUBTASKS, RECURRING;
+
+    fun labelRes(): Int = when (this) {
+        HIGH_PRIORITY -> R.string.task_filter_high_priority
+        HAS_DEADLINE -> R.string.task_filter_has_deadline
+        HAS_SUBTASKS -> R.string.task_filter_has_subtasks
+        RECURRING -> R.string.task_filter_recurring
     }
 }
 
@@ -30,7 +45,9 @@ data class TaskListUiState(
     val tasks: List<TaskWithSubtasksUi> = emptyList(),
     /** Full sorted list - kept so filter changes don't need a DB round-trip. */
     val allTasks: List<TaskWithSubtasksUi> = emptyList(),
-    val filter: TaskListFilter = TaskListFilter.ALL,
+    val filter: TaskListFilter = TaskListFilter.ACTIVE,
+    /** Stackable attribute filters, ANDed with [filter] and [tagFilter]. */
+    val attributeFilters: Set<TaskAttributeFilter> = emptySet(),
     /** All tags, for the filter row and pickers. */
     val allTags: List<Tag> = emptyList(),
     /** When set, the list is filtered to tasks carrying this tag id. */
