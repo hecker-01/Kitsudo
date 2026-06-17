@@ -44,6 +44,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!--
+                Google Assistant / Gemini App Actions: the CREATE_TASK built-in
+                intent maps voice commands ("add ... at ... in Kitsudo") onto the
+                capability declared in res/xml/shortcuts.xml.
+            -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts"
+            />
+
             <!-- Share-to-Kitsudo: turn shared text / links into a new task. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -51,6 +61,22 @@
                 <category android:name="android.intent.category.DEFAULT" />
 
                 <data android:mimeType="text/plain" />
+            </intent-filter>
+
+            <!--
+                Quick-add deep link backing the static launcher shortcuts
+                (kitsudo://add, optionally ?when=tonight|tomorrow). Internal only,
+                so no BROWSABLE category.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data
+                    android:host="add"
+                    android:scheme="kitsudo"
+                />
             </intent-filter>
         </activity>
 

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -45,11 +46,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -58,6 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import sh.calvin.reorderable.ReorderableColumn
 import dev.heckr.kitsudo.R
 import dev.heckr.kitsudo.domain.model.RecurrenceUnit
 import dev.heckr.kitsudo.presentation.tasks.components.DeadlineChip
@@ -103,6 +107,7 @@ fun TaskDetailScreen(
         onSetRecurrence = viewModel::setRecurrence,
         onToggleTag = viewModel::toggleTag,
         onCreateTag = viewModel::createAndAssignTag,
+        onUpdateTag = viewModel::updateTag,
         onDeleteTag = viewModel::deleteTag,
         onToggleComplete = viewModel::toggleComplete,
         onTogglePriority = viewModel::togglePriority,
@@ -112,6 +117,7 @@ fun TaskDetailScreen(
         onSaveSubtaskTitle = viewModel::saveSubtaskTitle,
         onSaveSubtaskDescription = viewModel::saveSubtaskDescription,
         onDeleteSubtask = viewModel::deleteSubtask,
+        onReorderSubtasks = viewModel::reorderSubtasks,
         onDeleteTask = { viewModel.deleteTask(onBack) },
         modifier = modifier,
     )
@@ -132,6 +138,7 @@ private fun TaskDetailContent(
     onSetRecurrence: (RecurrenceUnit?, Int) -> Unit,
     onToggleTag: (String) -> Unit,
     onCreateTag: (String, dev.heckr.kitsudo.domain.model.CatppuccinAccent) -> Unit,
+    onUpdateTag: (dev.heckr.kitsudo.domain.model.Tag) -> Unit,
     onDeleteTag: (String) -> Unit,
     onToggleComplete: (Boolean) -> Unit,
     onTogglePriority: () -> Unit,
@@ -141,6 +148,7 @@ private fun TaskDetailContent(
     onSaveSubtaskTitle: (subtaskId: String, title: String) -> Unit,
     onSaveSubtaskDescription: (subtaskId: String, description: String) -> Unit,
     onDeleteSubtask: (String) -> Unit,
+    onReorderSubtasks: (orderedIds: List<String>) -> Unit,
     onDeleteTask: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -410,7 +418,21 @@ private fun TaskDetailContent(
 
                     if (subtasks.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
-                        subtasks.forEachIndexed { index, subtask ->
+                        // Local mirror so a drag is reflected instantly; re-synced from
+                        // the source of truth whenever the upstream list changes.
+                        var ordered by remember(subtasks) { mutableStateOf(subtasks) }
+                        ReorderableColumn(
+                            list = ordered,
+                            onSettle = { from, to ->
+                                ordered = ordered.toMutableList()
+                                    .apply { add(to, removeAt(from)) }
+                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                onReorderSubtasks(ordered.map { it.id })
+                            },
+                            onMove = {
+                                view.performHapticFeedback(HapticFeedbackConstants.SEGMENT_TICK)
+                            },
+                        ) { index, subtask, _ ->
                             key(subtask.id) {
                                 if (index > 0) HorizontalDivider()
                                 SubtaskRow(
@@ -421,6 +443,11 @@ private fun TaskDetailContent(
                                     onSaveTitle = { onSaveSubtaskTitle(subtask.id, it) },
                                     onSaveDescription = { onSaveSubtaskDescription(subtask.id, it) },
                                     onDelete = { onDeleteSubtask(subtask.id) },
+                                    dragHandleModifier = Modifier.draggableHandle(
+                                        onDragStarted = {
+                                            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                        },
+                                    ),
                                 )
                             }
                         }
@@ -494,6 +521,7 @@ private fun TaskDetailContent(
             selectedTagIds = tags.map { it.id }.toSet(),
             onToggle = onToggleTag,
             onCreate = onCreateTag,
+            onUpdate = onUpdateTag,
             onDelete = onDeleteTag,
             onDismiss = { showTagPicker = false },
         )
@@ -545,6 +573,7 @@ private fun SubtaskRow(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
     initiallyExpanded: Boolean = false,
+    dragHandleModifier: Modifier = Modifier,
 ) {
     var showPicker by rememberSaveable { mutableStateOf(false) }
     var expanded by rememberSaveable(subtask.id) { mutableStateOf(initiallyExpanded) }
@@ -624,6 +653,15 @@ private fun SubtaskRow(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            // Drag handle - long-press and drag to reorder this subtask.
+            Icon(
+                painter = painterResource(R.drawable.ic_drag_handle),
+                contentDescription = stringResource(R.string.subtask_reorder),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = dragHandleModifier
+                    .padding(horizontal = 4.dp)
+                    .size(24.dp),
+            )
         }
 
         // -- Inline edit fields (expanded) ---------------------------------

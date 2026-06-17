@@ -57,9 +57,11 @@ data class TaskListUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val showAddSheet: Boolean = false,
-    /** Prefill for the Add sheet (used by share-to-Kitsudo); blank otherwise. */
+    /** Prefill for the Add sheet (used by share-to-Kitsudo and Assistant); blank otherwise. */
     val addSheetInitialTitle: String = "",
     val addSheetInitialDescription: String = "",
+    /** Prefilled deadline for the Add sheet (set by an Assistant "at <time>"); null otherwise. */
+    val addSheetInitialDeadlineAt: Long? = null,
     /** True when a newer version is available - drives the badge dot on the settings icon. */
     val updateAvailable: Boolean = false,
     /** True when a deletion survived process death and the undo snackbar should be re-shown. */

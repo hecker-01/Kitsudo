@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    Google Assistant / Gemini App Actions.
+
+    The CREATE_TASK built-in intent lets the user say things like
+    "add buy milk at 5pm in Kitsudo". The spoken task name (task.name) is handed
+    to MainActivity as the `assistant_task_name` string extra; the activity runs it
+    through DeadlineTextParser to split off any "at <time>" phrase into a deadline
+    and opens the Add-task sheet prefilled.
+
+    targetPackage is the release applicationId. Debug builds carry the ".dev"
+    suffix, so on-device App Action testing must use the release variant (or the
+    App Actions test tool), not a plain debug install.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Static launcher long-press shortcuts. They open MainActivity through the
+        kitsudo://add deep link (handled by an in-app intent-filter), so they keep
+        working on every build variant regardless of the applicationId suffix. The
+        optional ?when= phrase is run through DeadlineTextParser to preset a deadline.
+    -->
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_add"
+        android:shortcutId="add_task"
+        android:shortcutLongLabel="@string/shortcut_add_long"
+        android:shortcutShortLabel="@string/shortcut_add_short"
+    >
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="kitsudo://add"
+        />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_tonight"
+        android:shortcutId="add_tonight"
+        android:shortcutLongLabel="@string/shortcut_tonight_long"
+        android:shortcutShortLabel="@string/shortcut_tonight_short"
+    >
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="kitsudo://add?when=tonight"
+        />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_tomorrow"
+        android:shortcutId="add_tomorrow"
+        android:shortcutLongLabel="@string/shortcut_tomorrow_long"
+        android:shortcutShortLabel="@string/shortcut_tomorrow_short"
+    >
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="kitsudo://add?when=tomorrow"
+        />
+    </shortcut>
+
+    <capability android:name="actions.intent.CREATE_TASK">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="dev.heckr.kitsudo.MainActivity"
+            android:targetPackage="dev.heckr.kitsudo"
+        >
+            <parameter
+                android:key="assistant_task_name"
+                android:name="task.name"
+            />
+        </intent>
+    </capability>
+</shortcuts>

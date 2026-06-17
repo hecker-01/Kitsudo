@@ -1,0 +1,21 @@
+<!-- Launcher shortcut: Add task. White plus on the brand navy circle. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#24284B"
+        android:pathData="M12,0A12,12 0 1,0 12,24A12,12 0 1,0 12,0Z" />
+    <group
+        android:pivotX="0"
+        android:pivotY="0"
+        android:scaleX="0.58"
+        android:scaleY="0.58"
+        android:translateX="5"
+        android:translateY="5">
+        <path
+            android:fillColor="#FBF6FC"
+            android:pathData="M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+    </group>
+</vector>

@@ -28,9 +28,11 @@ fun KitsudoNavHost(
     startExpandSubtaskId: String? = null,
     /** Called once [startTaskId] has been navigated to, so the caller can reset state. */
     onStartTaskHandled: () -> Unit = {},
-    /** Title/description from a share, to prefill the Add-task sheet on the list. */
+    /** Title/description from a share or Assistant, to prefill the Add-task sheet. */
     sharedTitle: String? = null,
     sharedDescription: String? = null,
+    /** Deadline parsed from an Assistant "at <time>" phrase, to prefill the sheet. */
+    sharedDeadlineAt: Long? = null,
     /** Called once the shared draft has been handed to the list, so it isn't reused. */
     onSharedHandled: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -64,6 +66,7 @@ fun KitsudoNavHost(
                 },
                 sharedTitle = sharedTitle,
                 sharedDescription = sharedDescription,
+                sharedDeadlineAt = sharedDeadlineAt,
                 onSharedHandled = onSharedHandled,
             )
         }

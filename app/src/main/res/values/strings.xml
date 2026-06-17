@@ -2,6 +2,14 @@
 <resources>
     <string name="app_name">Kitsudo</string>
 
+    <!-- Launcher long-press shortcuts -->
+    <string name="shortcut_add_short">Add task</string>
+    <string name="shortcut_add_long">Add a new task</string>
+    <string name="shortcut_tonight_short">For tonight</string>
+    <string name="shortcut_tonight_long">Add a task due tonight</string>
+    <string name="shortcut_tomorrow_short">For tomorrow</string>
+    <string name="shortcut_tomorrow_long">Add a task due tomorrow</string>
+
     <!-- Task list -->
     <string name="task_list_title">Tasks</string>
     <string
@@ -101,6 +109,9 @@
     <string name="tags_done">Done</string>
     <string name="tags_assigned">Assigned</string>
     <string name="tags_delete">Delete tag</string>
+    <string name="tags_edit">Edit tag</string>
+    <string name="tags_edit_save">Save tag</string>
+    <string name="tags_edit_cancel">Cancel editing</string>
     <string name="tags_empty_hint">No tags yet. Create one below.</string>
     <string name="tags_new_label">New tag</string>
     <string name="tags_new_hint">Tag name…</string>
@@ -116,6 +127,7 @@
     <string name="task_subtask_count">%1$d/%2$d subtasks</string>
     <string name="task_subtask_add">Add</string>
     <string name="task_subtask_add_hint">New subtask…</string>
+    <string name="subtask_reorder">Drag to reorder subtask</string>
 
     <!-- Task detail -->
     <string name="task_detail_back">Back</string>

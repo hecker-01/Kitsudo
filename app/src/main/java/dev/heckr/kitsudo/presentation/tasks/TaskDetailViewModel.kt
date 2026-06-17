@@ -16,6 +16,7 @@ import dev.heckr.kitsudo.domain.usecase.CompleteTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.CreateTagUseCase
 import dev.heckr.kitsudo.domain.usecase.CreateTaskUseCase
 import dev.heckr.kitsudo.domain.usecase.DeleteTaskUseCase
+import dev.heckr.kitsudo.domain.usecase.ReorderTasksUseCase
 import dev.heckr.kitsudo.domain.usecase.UpdateTaskUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -40,6 +41,7 @@ class TaskDetailViewModel @Inject constructor(
     private val cascadeCompleteUseCase: CascadeCompleteUseCase,
     private val advanceRecurringTaskUseCase: AdvanceRecurringTaskUseCase,
     private val createTaskUseCase: CreateTaskUseCase,
+    private val reorderTasksUseCase: ReorderTasksUseCase,
     private val tagRepository: TagRepository,
     private val createTagUseCase: CreateTagUseCase,
     private val notificationScheduler: NotificationScheduler,
@@ -99,6 +101,11 @@ class TaskDetailViewModel @Inject constructor(
                 tagRepository.setTagAssigned(taskId, tag.id, true)
             }
         }
+    }
+
+    /** Renames and/or recolours an existing tag. */
+    fun updateTag(tag: dev.heckr.kitsudo.domain.model.Tag) {
+        viewModelScope.launch { tagRepository.updateTag(tag) }
     }
 
     fun deleteTag(tagId: String) {
@@ -234,6 +241,11 @@ class TaskDetailViewModel @Inject constructor(
                 sortOrder = _uiState.value.subtasks.size,
             )
         }
+    }
+
+    /** Persists a manual drag-reorder of this task's subtasks (sortOrder = new index). */
+    fun reorderSubtasks(orderedIds: List<String>) {
+        viewModelScope.launch { reorderTasksUseCase(orderedIds) }
     }
 
     fun deleteSubtask(subtaskId: String) {

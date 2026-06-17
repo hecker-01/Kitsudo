@@ -195,6 +195,11 @@ class TaskListViewModel @Inject constructor(
         }
     }
 
+    /** Renames and/or recolours an existing tag. */
+    fun updateTag(tag: Tag) {
+        viewModelScope.launch { tagRepository.updateTag(tag) }
+    }
+
     fun deleteTag(tagId: String) {
         viewModelScope.launch { tagRepository.deleteTag(tagId) }
     }
@@ -204,28 +209,55 @@ class TaskListViewModel @Inject constructor(
     }
 
     /**
-     * Persists a manual reorder. [orderedIds] is the full visible order after the
-     * drag; sortOrder is rewritten to match. Only used in [TaskSortMode.CUSTOM].
+     * Persists a manual reorder. [orderedVisibleIds] is the on-screen order after the
+     * drag, which may be a filtered subset. The new visible order is spliced back into
+     * the full list so hidden tasks keep their relative positions, then sortOrder is
+     * rewritten to match. Only used in [TaskSortMode.CUSTOM].
      */
-    fun reorderTasks(orderedIds: List<String>) {
-        viewModelScope.launch { reorderTasksUseCase(orderedIds) }
+    fun reorderTasks(orderedVisibleIds: List<String>) {
+        viewModelScope.launch {
+            val visible = orderedVisibleIds.toSet()
+            val queue = ArrayDeque(orderedVisibleIds)
+            val fullOrder = _uiState.value.allTasks.map { it.id }.map { id ->
+                if (id in visible && queue.isNotEmpty()) queue.removeFirst() else id
+            }
+            reorderTasksUseCase(fullOrder)
+        }
     }
 
     fun showAddSheet() = _uiState.update {
-        it.copy(showAddSheet = true, addSheetInitialTitle = "", addSheetInitialDescription = "")
+        it.copy(
+            showAddSheet = true,
+            addSheetInitialTitle = "",
+            addSheetInitialDescription = "",
+            addSheetInitialDeadlineAt = null,
+        )
     }
 
-    /** Opens the Add sheet prefilled from shared text (share-to-Kitsudo). */
-    fun showAddSheetPrefilled(title: String, description: String) = _uiState.update {
+    /**
+     * Opens the Add sheet prefilled from shared text (share-to-Kitsudo) or a voice
+     * assistant utterance, optionally pre-setting a deadline parsed from the phrase.
+     */
+    fun showAddSheetPrefilled(
+        title: String,
+        description: String,
+        deadlineAt: Long? = null,
+    ) = _uiState.update {
         it.copy(
             showAddSheet = true,
             addSheetInitialTitle = title,
             addSheetInitialDescription = description,
+            addSheetInitialDeadlineAt = deadlineAt,
         )
     }
 
     fun hideAddSheet() = _uiState.update {
-        it.copy(showAddSheet = false, addSheetInitialTitle = "", addSheetInitialDescription = "")
+        it.copy(
+            showAddSheet = false,
+            addSheetInitialTitle = "",
+            addSheetInitialDescription = "",
+            addSheetInitialDeadlineAt = null,
+        )
     }
 
     fun addTask(

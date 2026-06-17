@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
@@ -50,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -70,6 +72,7 @@ fun TagPickerSheet(
     selectedTagIds: Set<String>,
     onToggle: (String) -> Unit,
     onCreate: (String, CatppuccinAccent) -> Unit,
+    onUpdate: (Tag) -> Unit,
     onDelete: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -118,6 +121,7 @@ fun TagPickerSheet(
                                 tag = tag,
                                 selected = tag.id in selectedTagIds,
                                 onToggle = { onToggle(tag.id) },
+                                onUpdate = onUpdate,
                                 onDelete = { onDelete(tag.id) },
                             )
                         }
@@ -193,8 +197,23 @@ private fun TagRow(
     tag: Tag,
     selected: Boolean,
     onToggle: () -> Unit,
+    onUpdate: (Tag) -> Unit,
     onDelete: () -> Unit,
 ) {
+    var editing by remember(tag.id) { mutableStateOf(false) }
+
+    if (editing) {
+        TagEditRow(
+            tag = tag,
+            onSave = { name, color ->
+                onUpdate(tag.copy(name = name, color = color))
+                editing = false
+            },
+            onCancel = { editing = false },
+        )
+        return
+    }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -218,6 +237,14 @@ private fun TagRow(
                 .weight(1f)
                 .padding(start = 12.dp),
         )
+        IconButton(onClick = { editing = true }) {
+            Icon(
+                painter = painterResource(R.drawable.ic_edit),
+                contentDescription = stringResource(R.string.tags_edit),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
         IconButton(onClick = onDelete) {
             Icon(
                 Icons.Outlined.Delete,
@@ -226,6 +253,57 @@ private fun TagRow(
             )
         }
     }
+}
+
+/** Inline editor for a tag: rename and recolour, with save / cancel. */
+@Composable
+private fun TagEditRow(
+    tag: Tag,
+    onSave: (name: String, color: CatppuccinAccent) -> Unit,
+    onCancel: () -> Unit,
+) {
+    var name by remember(tag.id) { mutableStateOf(tag.name) }
+    var color by remember(tag.id) { mutableStateOf(tag.color) }
+    val save = { if (name.isNotBlank()) onSave(name.trim(), color) }
+
+    OutlinedTextField(
+        value = name,
+        onValueChange = { name = it },
+        singleLine = true,
+        leadingIcon = {
+            ColorPickerDot(selected = color, onSelect = { color = it })
+        },
+        trailingIcon = {
+            Row {
+                IconButton(onClick = onCancel) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.tags_edit_cancel),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = save, enabled = name.isNotBlank()) {
+                    Icon(
+                        Icons.Filled.Check,
+                        contentDescription = stringResource(R.string.tags_edit_save),
+                        tint = if (name.isNotBlank()) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        },
+                    )
+                }
+            }
+        },
+        keyboardOptions = KeyboardOptions(
+            capitalization = KeyboardCapitalization.Words,
+            imeAction = ImeAction.Done,
+        ),
+        keyboardActions = KeyboardActions(onDone = { save() }),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+    )
 }
 
 /**

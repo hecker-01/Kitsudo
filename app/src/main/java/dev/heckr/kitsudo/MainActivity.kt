@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import dev.heckr.kitsudo.data.notification.NotificationHelper
 import dev.heckr.kitsudo.data.update.AppUpdater
+import dev.heckr.kitsudo.domain.util.DeadlineTextParser
 import dev.heckr.kitsudo.presentation.navigation.KitsudoNavHost
 import dev.heckr.kitsudo.presentation.onboarding.OnboardingScreen
 import dev.heckr.kitsudo.presentation.onboarding.OnboardingState
@@ -53,8 +54,16 @@ class MainActivity : ComponentActivity() {
     /** A task (and optional subtask to expand) to open from a notification tap. */
     data class PendingOpen(val taskId: String, val expandSubtaskId: String?)
 
-    /** Text shared into the app (ACTION_SEND), to prefill a new task. */
-    data class SharedDraft(val title: String, val description: String)
+    /**
+     * Text shared into the app (ACTION_SEND) or dictated to a voice assistant, to
+     * prefill a new task. [deadlineAt] is set when an Assistant phrase such as
+     * "at 5pm" was parsed out of the utterance; null otherwise.
+     */
+    data class SharedDraft(
+        val title: String,
+        val description: String,
+        val deadlineAt: Long? = null,
+    )
 
     /**
      * Holds the target from the most recent notification tap. The NavHost
@@ -72,6 +81,8 @@ class MainActivity : ComponentActivity() {
         appUpdater.checkForUpdates(this)
         pendingOpen.value = intent?.extractPendingOpen()
         pendingShare.value = intent?.extractSharedDraft()
+            ?: intent?.extractAssistantDraft()
+            ?: intent?.extractQuickAddDraft()
         setContent {
             val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()
             val startOpen by pendingOpen.collectAsState()
@@ -106,6 +117,7 @@ class MainActivity : ComponentActivity() {
                         onStartTaskHandled = { pendingOpen.value = null },
                         sharedTitle = startShare?.title,
                         sharedDescription = startShare?.description,
+                        sharedDeadlineAt = startShare?.deadlineAt,
                         onSharedHandled = { pendingShare.value = null },
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -149,7 +161,11 @@ class MainActivity : ComponentActivity() {
         // Update the backing intent so further onNewIntent calls see the new extras.
         setIntent(intent)
         intent.extractPendingOpen()?.let { pendingOpen.value = it }
-        intent.extractSharedDraft()?.let { pendingShare.value = it }
+        (
+            intent.extractSharedDraft()
+                ?: intent.extractAssistantDraft()
+                ?: intent.extractQuickAddDraft()
+            )?.let { pendingShare.value = it }
     }
 
     private fun Intent.extractPendingOpen(): PendingOpen? {
@@ -176,6 +192,42 @@ class MainActivity : ComponentActivity() {
             text.isNotEmpty() -> SharedDraft(text, "")
             else -> null
         }
+    }
+
+    /**
+     * Maps a Google Assistant / Gemini CREATE_TASK launch into a [SharedDraft]. The
+     * App Action capability (res/xml/shortcuts.xml) passes the spoken task name as a
+     * string extra; [DeadlineTextParser] then splits any "at <time>" phrase off the
+     * title and resolves it to a deadline. Returns null when no task name is present.
+     */
+    private fun Intent.extractAssistantDraft(): SharedDraft? {
+        val spoken = getStringExtra(EXTRA_ASSISTANT_TASK)?.trim()
+        if (spoken.isNullOrEmpty()) return null
+        val parsed = DeadlineTextParser.parse(spoken)
+        // If the phrase was nothing but a time, keep the raw text as the title so the
+        // user still has something to edit rather than an empty Add sheet.
+        val title = parsed.title.ifBlank { spoken }
+        return SharedDraft(title = title, description = "", deadlineAt = parsed.deadlineAt)
+    }
+
+    /**
+     * Maps the kitsudo://add quick-add deep link (fired by the static launcher
+     * shortcuts) into an empty [SharedDraft]. An optional `?when=` phrase such as
+     * "tonight" or "tomorrow" is resolved to a preset deadline via the same parser.
+     */
+    private fun Intent.extractQuickAddDraft(): SharedDraft? {
+        val uri = data ?: return null
+        if (action != Intent.ACTION_VIEW || uri.scheme != "kitsudo" || uri.host != "add") {
+            return null
+        }
+        val deadlineAt = uri.getQueryParameter("when")
+            ?.let { DeadlineTextParser.parse(it).deadlineAt }
+        return SharedDraft(title = "", description = "", deadlineAt = deadlineAt)
+    }
+
+    companion object {
+        /** Intent extra key bound to the CREATE_TASK `task.name` parameter. */
+        const val EXTRA_ASSISTANT_TASK = "assistant_task_name"
     }
 }
 

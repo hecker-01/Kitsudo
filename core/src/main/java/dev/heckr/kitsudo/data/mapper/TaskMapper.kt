@@ -40,5 +40,8 @@ fun Task.toEntity(): TaskEntity = TaskEntity(
 
 fun TaskWithSubtasksEntity.toDomain(): TaskWithSubtasks = TaskWithSubtasks(
     task = task.toDomain(),
-    subtasks = subtasks.map { it.toDomain() },
+    // The @Relation has no ORDER BY, so sort by the manual order here to match the
+    // detail screen (which queries subtasks ordered by sortOrder, then createdAt).
+    subtasks = subtasks.map { it.toDomain() }
+        .sortedWith(compareBy({ it.sortOrder }, { it.createdAt })),
 )

@@ -64,17 +64,19 @@ fun AddTaskSheet(
     onDismiss: () -> Unit,
     availableTags: List<Tag>,
     onCreateTag: (String, CatppuccinAccent, (Tag) -> Unit) -> Unit,
+    onUpdateTag: (Tag) -> Unit,
     onDeleteTag: (String) -> Unit,
     modifier: Modifier = Modifier,
     initialTitle: String = "",
     initialDescription: String = "",
+    initialDeadlineAt: Long? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val view = LocalView.current
     var title by remember { mutableStateOf(initialTitle) }
     var description by remember { mutableStateOf(initialDescription) }
-    var deadlineAt by remember { mutableStateOf<Long?>(null) }
+    var deadlineAt by remember { mutableStateOf(initialDeadlineAt) }
     var showDeadlinePicker by remember { mutableStateOf(false) }
     var recurrenceUnit by remember { mutableStateOf<RecurrenceUnit?>(null) }
     var recurrenceInterval by remember { mutableIntStateOf(1) }
@@ -303,6 +305,7 @@ fun AddTaskSheet(
                 // New tags are auto-selected for the task being added.
                 onCreateTag(name, color) { tag -> selectedTagIds.add(tag.id) }
             },
+            onUpdate = onUpdateTag,
             onDelete = { id ->
                 selectedTagIds.remove(id)
                 onDeleteTag(id)

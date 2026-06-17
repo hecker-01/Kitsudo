@@ -109,16 +109,22 @@ fun TaskListScreen(
     onOpenSubtask: (parentId: String, subtaskId: String) -> Unit,
     sharedTitle: String? = null,
     sharedDescription: String? = null,
+    sharedDeadlineAt: Long? = null,
     onSharedHandled: () -> Unit = {},
     viewModel: TaskListViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Share-to-Kitsudo: open the Add sheet prefilled from the shared text, once.
-    LaunchedEffect(sharedTitle, sharedDescription) {
+    // Share-to-Kitsudo / Assistant: open the Add sheet prefilled from the incoming
+    // text (and any parsed deadline), once.
+    LaunchedEffect(sharedTitle, sharedDescription, sharedDeadlineAt) {
         if (sharedTitle != null) {
-            viewModel.showAddSheetPrefilled(sharedTitle, sharedDescription.orEmpty())
+            viewModel.showAddSheetPrefilled(
+                sharedTitle,
+                sharedDescription.orEmpty(),
+                sharedDeadlineAt,
+            )
             onSharedHandled()
         }
     }
@@ -182,6 +188,7 @@ fun TaskListScreen(
         onSetFilter = viewModel::setFilter,
         onSetTagFilter = viewModel::setTagFilter,
         onCreateTag = viewModel::createTag,
+        onUpdateTag = viewModel::updateTag,
         onDeleteTag = viewModel::deleteTag,
         onSetSortMode = viewModel::setSortMode,
         onToggleAttributeFilter = viewModel::toggleAttributeFilter,
@@ -214,6 +221,7 @@ private fun TaskListContent(
     onSetFilter: (TaskListFilter) -> Unit,
     onSetTagFilter: (String?) -> Unit,
     onCreateTag: (String, dev.heckr.kitsudo.domain.model.CatppuccinAccent, (dev.heckr.kitsudo.domain.model.Tag) -> Unit) -> Unit,
+    onUpdateTag: (dev.heckr.kitsudo.domain.model.Tag) -> Unit,
     onDeleteTag: (String) -> Unit,
     onSetSortMode: (TaskSortMode) -> Unit,
     onToggleAttributeFilter: (TaskAttributeFilter) -> Unit,
@@ -223,7 +231,7 @@ private fun TaskListContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.task_list_title)) },
+                title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     IconButton(onClick = onOpenSettings) {
                         Box {
@@ -300,9 +308,9 @@ private fun TaskListContent(
                 )
                 else -> TaskList(
                     tasks = uiState.tasks,
-                    // Drag-reorder only makes sense over the full, unfiltered list.
-                    reorderEnabled = uiState.sortMode == TaskSortMode.CUSTOM &&
-                        uiState.filter == TaskListFilter.ALL,
+                    // Manual drag-reorder is available in custom sort under any filter;
+                    // the view model splices the visible order back into the full list.
+                    reorderEnabled = uiState.sortMode == TaskSortMode.CUSTOM,
                     onReorder = onReorder,
                     onOpenTask = onOpenTask,
                     onOpenSubtask = onOpenSubtask,
@@ -321,9 +329,11 @@ private fun TaskListContent(
             onDismiss = onHideAddSheet,
             availableTags = uiState.allTags,
             onCreateTag = onCreateTag,
+            onUpdateTag = onUpdateTag,
             onDeleteTag = onDeleteTag,
             initialTitle = uiState.addSheetInitialTitle,
             initialDescription = uiState.addSheetInitialDescription,
+            initialDeadlineAt = uiState.addSheetInitialDeadlineAt,
         )
     }
 }
@@ -1123,6 +1133,7 @@ private fun TaskListPreview() {
             onSetFilter = {},
             onSetTagFilter = {},
             onCreateTag = { _, _, _ -> },
+            onUpdateTag = {},
             onDeleteTag = {},
             onSetSortMode = {},
             onToggleAttributeFilter = {},
